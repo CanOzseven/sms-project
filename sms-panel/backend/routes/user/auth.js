@@ -1,0 +1,136 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const User = require('../../models/User');
+const { generateToken, verifyToken } = require('../../middleware/auth');
+const { logLogin } = require('../../services/activityLogger');
+
+/**
+ * POST /api/user/login
+ * Kullanıcı girişi
+ */
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email ve şifre gerekli'
+      });
+    }
+
+    // Kullanıcıyı bul
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      await logLogin({ email }, req, false);
+      return res.status(401).json({
+        success: false,
+        message: 'Geçersiz email veya şifre'
+      });
+    }
+
+    // Hesap aktif mi
+    if (user.status !== 'active') {
+      await logLogin(user, req, false);
+      return res.status(403).json({
+        success: false,
+        message: 'Hesabınız devre dışı bırakılmış. Yönetici ile iletişime geçin.'
+      });
+    }
+
+    // Şifre kontrolü
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      await logLogin(user, req, false);
+      return res.status(401).json({
+        success: false,
+        message: 'Geçersiz email veya şifre'
+      });
+    }
+
+    // Son giriş zamanını güncelle
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Token oluştur
+    const token = generateToken(user._id, user.role);
+
+    // Başarılı girişi logla
+    await logLogin(user, req, true);
+
+    res.json({
+      success: true,
+      message: 'Giriş başarılı',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('User login hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+/**
+ * GET /api/user/me
+ * Mevcut kullanıcı bilgilerini getir
+ */
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('authorizedDevices', 'name model status lastSeen');
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('User me hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+/**
+ * POST /api/user/logout
+ * Kullanıcı çıkışı (token client tarafında silinir, ama aktiviteyi loglarız)
+ */
+router.post('/logout', verifyToken, async (req, res) => {
+  try {
+    const { logActivity } = require('../../services/activityLogger');
+
+    await logActivity(
+      req.user._id,
+      'LOGOUT',
+      `${req.user.email} çıkış yaptı`,
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'Çıkış başarılı'
+    });
+  } catch (error) {
+    console.error('User logout hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+module.exports = router;
