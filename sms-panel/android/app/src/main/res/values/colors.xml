@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="bg_primary">#0a0e14</color>
+    <color name="bg_secondary">#151922</color>
+    <color name="bg_tertiary">#1e2430</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_primary">#ff6b35</color>
+    <color name="accent_secondary">#ff8c5a</color>
+    <color name="success">#00d4aa</color>
+    <color name="warning">#ffc107</color>
+    <color name="danger">#ff4757</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#e6e8eb</color>
+    <color name="text_secondary">#8b95a5</color>
+
+    <!-- Border Color -->
+    <color name="border_color">#2a3142</color>
+
+    <!-- Material Theme Colors -->
+    <color name="colorPrimary">@color/accent_primary</color>
+    <color name="colorPrimaryDark">@color/bg_primary</color>
+    <color name="colorAccent">@color/accent_primary</color>
+
+    <!-- Status Bar -->
+    <color name="status_bar_color">@color/bg_primary</color>
+</resources>

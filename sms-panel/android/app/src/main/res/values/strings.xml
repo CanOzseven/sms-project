@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SMS Panel</string>
+
+    <!-- Setup Screen -->
+    <string name="setup_title">Cihaz Kurulumu</string>
+    <string name="setup_info">Bu kurulum sadece BİR KERE yapılır</string>
+    <string name="server_url_label">Sunucu Adresi</string>
+    <string name="server_url_hint">https://sms-panel.example.com</string>
+    <string name="activation_code_label">Aktivasyon Kodu (8 karakter)</string>
+    <string name="activation_code_hint">XXXXXXXX</string>
+    <string name="activate_button">Cihazı Kaydet ve Başlat</string>
+
+    <!-- Error Messages -->
+    <string name="error_server_empty">Sunucu adresi boş olamaz</string>
+    <string name="error_code_invalid">Aktivasyon kodu 8 karakter olmalıdır</string>
+    <string name="error_connection">Bağlantı hatası</string>
+    <string name="error_activation">Aktivasyon başarısız</string>
+    <string name="error_permissions">İzinler verilmedi</string>
+
+    <!-- Success Messages -->
+    <string name="success_activation">Aktivasyon başarılı!</string>
+    <string name="success_connected">Sunucuya bağlı</string>
+
+    <!-- Status -->
+    <string name="status_active">ACTIVE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="status_syncing">Senkronize ediliyor...</string>
+
+    <!-- Labels -->
+    <string name="label_device">Device</string>
+    <string name="label_status">Status</string>
+    <string name="label_uptime">Uptime</string>
+    <string name="label_last_sync">Son sync</string>
+    <string name="label_total_sms">Toplam SMS</string>
+    <string name="label_synced_sms">Sync Edildi</string>
+    <string name="label_activity_log">Aktivite Logu</string>
+
+    <!-- Notification -->
+    <string name="notification_title">SMS Panel</string>
+    <string name="notification_text">SMS senkronizasyonu aktif</string>
+    <string name="notification_channel_name">SMS Panel Service</string>
+    <string name="notification_channel_desc">SMS Panel arka plan servisi</string>
+</resources>
