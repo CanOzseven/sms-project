@@ -159,12 +159,31 @@ class MainActivity : AppCompatActivity() {
         val serverUrl = serverUrlInput.text.toString().trim()
         val activationCode = activationCodeInput.text.toString().trim().uppercase()
 
+        // URL validation
         if (serverUrl.isEmpty()) {
             setupStatus.text = "⚠️ Sunucu adresi bos olamaz"
             setupStatus.visibility = View.VISIBLE
             return
         }
 
+        // URL formatı kontrolü
+        if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+            setupStatus.text = "⚠️ Sunucu adresi http:// veya https:// ile baslamalidir"
+            setupStatus.visibility = View.VISIBLE
+            return
+        }
+
+        // Geçerli URL mi kontrol et
+        try {
+            val testUrl = java.net.URL(serverUrl)
+            testUrl.toURI() // URI formatı geçerli mi kontrol et
+        } catch (e: Exception) {
+            setupStatus.text = "⚠️ Gecersiz sunucu adresi: ${e.message}"
+            setupStatus.visibility = View.VISIBLE
+            return
+        }
+
+        // Aktivasyon kodu kontrolü
         if (activationCode.isEmpty() || activationCode.length != 8) {
             setupStatus.text = "⚠️ Aktivasyon kodu 8 karakter olmalidir"
             setupStatus.visibility = View.VISIBLE
