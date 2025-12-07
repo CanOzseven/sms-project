@@ -983,7 +983,7 @@
     // Check Auth
     async function checkAuth() {
       if (!token) {
-        showLoginPage();
+        window.location.href = 'login.html';
         return false;
       }
 
@@ -991,27 +991,16 @@
         const data = await api('/user/me');
         currentUser = data.user;
         document.getElementById('profileUsername').textContent = currentUser.username;
-        showAppPage();
+        document.getElementById('appContainer').classList.add('active');
         loadDevices();
         startPolling();
         return true;
       } catch (error) {
         localStorage.removeItem('userToken');
         token = null;
-        showLoginPage();
+        window.location.href = 'login.html';
         return false;
       }
-    }
-
-    function showLoginPage() {
-      document.getElementById('loginPage').style.display = 'flex';
-      document.getElementById('appContainer').classList.remove('active');
-      stopPolling();
-    }
-
-    function showAppPage() {
-      document.getElementById('loginPage').style.display = 'none';
-      document.getElementById('appContainer').classList.add('active');
     }
 
     // Login
@@ -1044,8 +1033,7 @@
       token = null;
       currentUser = null;
       stopPolling();
-      showLoginPage();
-      showToast('Cikis yapildi');
+      window.location.href = 'login.html';
     });
 
     // Profile Dropdown

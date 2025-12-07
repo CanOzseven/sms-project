@@ -58,6 +58,9 @@ app.get('/api', (req, res) => {
   });
 });
 
+// Unified Auth Route (role-based login)
+app.use('/api/auth', require('./routes/auth'));
+
 // Admin Routes
 app.use('/api/admin', require('./routes/admin/auth'));
 app.use('/api/admin/users', require('./routes/admin/users'));
