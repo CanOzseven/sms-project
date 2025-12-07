@@ -43,12 +43,20 @@ class SMSBackgroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.d("SMSPanel", "========================================")
+        android.util.Log.d("SMSPanel", "SERVICE BAŞLATILDI")
+        android.util.Log.d("SMSPanel", "Heartbeat interval: ${HEARTBEAT_INTERVAL / 1000} saniye")
+        android.util.Log.d("SMSPanel", "Sync interval: ${SYNC_INTERVAL / 1000} saniye")
+        android.util.Log.d("SMSPanel", "========================================")
+
         startForeground(NOTIFICATION_ID, createNotification())
 
         // İlk heartbeat'i hemen at
         scope.launch {
+            android.util.Log.d("SMSPanel", "İlk heartbeat gönderiliyor...")
             sendHeartbeat()
             delay(1000) // 1 saniye bekle
+            android.util.Log.d("SMSPanel", "İlk SMS sync başlatılıyor...")
             syncAllSMS() // İlk sync'i de hemen yap
         }
 
@@ -122,10 +130,20 @@ class SMSBackgroundService : Service() {
     }
 
     private suspend fun sendHeartbeat() {
-        val serverUrl = prefs.getString("serverUrl", null) ?: return
-        val activationCode = prefs.getString("activationCode", null) ?: return
+        val serverUrl = prefs.getString("serverUrl", null)
+        val activationCode = prefs.getString("activationCode", null)
+
+        android.util.Log.d("SMSPanel", ">>> HEARTBEAT <<<")
+        android.util.Log.d("SMSPanel", "Server URL: $serverUrl")
+        android.util.Log.d("SMSPanel", "Activation Code: ${activationCode?.take(4)}****")
+
+        if (serverUrl == null || activationCode == null) {
+            android.util.Log.e("SMSPanel", "SERVER URL veya ACTIVATION CODE yok!")
+            return
+        }
 
         val url = "$serverUrl/api/device/heartbeat"
+        android.util.Log.d("SMSPanel", "Heartbeat URL: $url")
 
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -140,35 +158,53 @@ class SMSBackgroundService : Service() {
             .build()
 
         try {
+            val startTime = System.currentTimeMillis()
             client.newCall(request).execute().use { response ->
+                val duration = System.currentTimeMillis() - startTime
                 if (response.isSuccessful) {
-                    android.util.Log.d("SMSPanel", "Heartbeat gönderildi")
+                    android.util.Log.d("SMSPanel", "✓ Heartbeat başarılı (${duration}ms)")
+                } else {
+                    android.util.Log.e("SMSPanel", "✗ Heartbeat başarısız: ${response.code} - ${response.message}")
+                    android.util.Log.e("SMSPanel", "Response body: ${response.body?.string()}")
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "Heartbeat hatası: ${e.message}")
+            android.util.Log.e("SMSPanel", "✗ Heartbeat EXCEPTION: ${e.javaClass.simpleName}")
+            android.util.Log.e("SMSPanel", "✗ Heartbeat hatası: ${e.message}")
+            e.printStackTrace()
         }
     }
 
     private suspend fun syncAllSMS() {
-        val serverUrl = prefs.getString("serverUrl", null) ?: return
-        val activationCode = prefs.getString("activationCode", null) ?: return
+        val serverUrl = prefs.getString("serverUrl", null)
+        val activationCode = prefs.getString("activationCode", null)
 
-        // Son sync zamanını al
-        val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
+        android.util.Log.d("SMSPanel", ">>> SMS SYNC <<<")
 
-        // SMS'leri oku
-        val messages = readSMSMessages(lastSyncTime)
-
-        if (messages.isEmpty()) {
-            android.util.Log.d("SMSPanel", "Yeni SMS yok")
+        if (serverUrl == null || activationCode == null) {
+            android.util.Log.e("SMSPanel", "SERVER URL veya ACTIVATION CODE yok!")
             return
         }
 
-        android.util.Log.d("SMSPanel", "${messages.size} SMS senkronize edilecek")
+        // Son sync zamanını al
+        val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
+        android.util.Log.d("SMSPanel", "Son sync zamanı: $lastSyncTime")
+
+        // SMS'leri oku
+        val messages = readSMSMessages(lastSyncTime)
+        android.util.Log.d("SMSPanel", "Cihazdan okunan SMS sayısı: ${messages.size}")
+
+        if (messages.isEmpty()) {
+            android.util.Log.d("SMSPanel", "Yeni SMS yok, sync atlanıyor")
+            return
+        }
+
+        android.util.Log.d("SMSPanel", ">>> ${messages.size} SMS SENKRONIZE EDILECEK <<<")
 
         val url = "$serverUrl/api/device/sms"
         val json = gson.toJson(mapOf("messages" to messages))
+        android.util.Log.d("SMSPanel", "Sync URL: $url")
+        android.util.Log.d("SMSPanel", "JSON boyutu: ${json.length} karakter")
 
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
@@ -183,9 +219,18 @@ class SMSBackgroundService : Service() {
             .build()
 
         try {
+            val startTime = System.currentTimeMillis()
+            android.util.Log.d("SMSPanel", "HTTP POST gönderiliyor...")
+
             client.newCall(request).execute().use { response ->
+                val duration = System.currentTimeMillis() - startTime
+                android.util.Log.d("SMSPanel", "HTTP yanıt alındı (${duration}ms)")
+                android.util.Log.d("SMSPanel", "Response code: ${response.code}")
+
                 if (response.isSuccessful) {
                     val body = response.body?.string()
+                    android.util.Log.d("SMSPanel", "Response body: $body")
+
                     val result = gson.fromJson(body, Map::class.java)
                     val synced = (result["synced"] as? Double)?.toInt() ?: 0
 
@@ -197,11 +242,16 @@ class SMSBackgroundService : Service() {
                         .putLong("lastSyncTimestamp", System.currentTimeMillis())
                         .apply()
 
-                    android.util.Log.d("SMSPanel", "$synced SMS senkronize edildi")
+                    android.util.Log.d("SMSPanel", "✓ $synced SMS senkronize edildi (Toplam: $totalSynced)")
+                } else {
+                    android.util.Log.e("SMSPanel", "✗ Sync başarısız: ${response.code} - ${response.message}")
+                    android.util.Log.e("SMSPanel", "Response body: ${response.body?.string()}")
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "SMS sync hatası: ${e.message}")
+            android.util.Log.e("SMSPanel", "✗ SMS SYNC EXCEPTION: ${e.javaClass.simpleName}")
+            android.util.Log.e("SMSPanel", "✗ SMS sync hatası: ${e.message}")
+            e.printStackTrace()
         }
     }
 

@@ -159,8 +159,15 @@ class MainActivity : AppCompatActivity() {
         val serverUrl = serverUrlInput.text.toString().trim()
         val activationCode = activationCodeInput.text.toString().trim().uppercase()
 
+        android.util.Log.d("SMSPanel", "========================================")
+        android.util.Log.d("SMSPanel", "AKTİVASYON BAŞLADI")
+        android.util.Log.d("SMSPanel", "Server URL: $serverUrl")
+        android.util.Log.d("SMSPanel", "Activation Code: ${activationCode.take(4)}****")
+        android.util.Log.d("SMSPanel", "========================================")
+
         // URL validation
         if (serverUrl.isEmpty()) {
+            android.util.Log.e("SMSPanel", "URL boş!")
             setupStatus.text = "⚠️ Sunucu adresi bos olamaz"
             setupStatus.visibility = View.VISIBLE
             return
@@ -168,6 +175,7 @@ class MainActivity : AppCompatActivity() {
 
         // URL formatı kontrolü
         if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+            android.util.Log.e("SMSPanel", "URL http:// veya https:// ile başlamıyor!")
             setupStatus.text = "⚠️ Sunucu adresi http:// veya https:// ile baslamalidir"
             setupStatus.visibility = View.VISIBLE
             return
@@ -177,7 +185,9 @@ class MainActivity : AppCompatActivity() {
         try {
             val testUrl = java.net.URL(serverUrl)
             testUrl.toURI() // URI formatı geçerli mi kontrol et
+            android.util.Log.d("SMSPanel", "✓ URL formatı geçerli")
         } catch (e: Exception) {
+            android.util.Log.e("SMSPanel", "✗ Geçersiz URL: ${e.message}")
             setupStatus.text = "⚠️ Gecersiz sunucu adresi: ${e.message}"
             setupStatus.visibility = View.VISIBLE
             return
@@ -185,6 +195,7 @@ class MainActivity : AppCompatActivity() {
 
         // Aktivasyon kodu kontrolü
         if (activationCode.isEmpty() || activationCode.length != 8) {
+            android.util.Log.e("SMSPanel", "Aktivasyon kodu geçersiz (uzunluk: ${activationCode.length})")
             setupStatus.text = "⚠️ Aktivasyon kodu 8 karakter olmalidir"
             setupStatus.visibility = View.VISIBLE
             return
@@ -201,6 +212,10 @@ class MainActivity : AppCompatActivity() {
             android.provider.Settings.Secure.ANDROID_ID
         )
 
+        android.util.Log.d("SMSPanel", "Aktivasyon URL: $url")
+        android.util.Log.d("SMSPanel", "Model: $model")
+        android.util.Log.d("SMSPanel", "Android ID: $androidId")
+
         val json = gson.toJson(mapOf("model" to model, "androidId" to androidId))
 
         val client = OkHttpClient.Builder()
@@ -215,8 +230,15 @@ class MainActivity : AppCompatActivity() {
             .post(json.toRequestBody("application/json".toMediaType()))
             .build()
 
+        android.util.Log.d("SMSPanel", "HTTP POST gönderiliyor...")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                android.util.Log.e("SMSPanel", "✗ AKTİVASYON BAŞARISIZ - EXCEPTION")
+                android.util.Log.e("SMSPanel", "Exception: ${e.javaClass.simpleName}")
+                android.util.Log.e("SMSPanel", "Message: ${e.message}")
+                e.printStackTrace()
+
                 runOnUiThread {
                     activateButton.isEnabled = true
                     setupStatus.text = "❌ Baglanti hatasi: ${e.message}"
@@ -225,6 +247,10 @@ class MainActivity : AppCompatActivity() {
 
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
+                android.util.Log.d("SMSPanel", "HTTP yanıt alındı")
+                android.util.Log.d("SMSPanel", "Response code: ${response.code}")
+                android.util.Log.d("SMSPanel", "Response body: $body")
+
                 runOnUiThread {
                     activateButton.isEnabled = true
 
@@ -233,6 +259,9 @@ class MainActivity : AppCompatActivity() {
                             val result = gson.fromJson(body, Map::class.java)
                             val device = result["device"] as? Map<*, *>
                             val deviceName = device?.get("name") as? String ?: "Bilinmeyen"
+
+                            android.util.Log.d("SMSPanel", "✓ AKTİVASYON BAŞARILI")
+                            android.util.Log.d("SMSPanel", "Device Name: $deviceName")
 
                             // Kaydet
                             prefs.edit()
@@ -245,15 +274,20 @@ class MainActivity : AppCompatActivity() {
 
                             // Aktif ekrana gec
                             handler.postDelayed({
+                                android.util.Log.d("SMSPanel", "Aktif ekrana geçiliyor...")
                                 showActiveScreen()
                                 startBackgroundService()
                             }, 1000)
                         } catch (e: Exception) {
+                            android.util.Log.e("SMSPanel", "✗ Yanıt parse hatası: ${e.message}")
+                            e.printStackTrace()
                             setupStatus.text = "❌ Yanit isleme hatasi"
                         }
                     } else {
+                        android.util.Log.e("SMSPanel", "✗ AKTİVASYON BAŞARISIZ")
                         try {
                             val error = gson.fromJson(body, Map::class.java)
+                            android.util.Log.e("SMSPanel", "Error: ${error["message"]}")
                             setupStatus.text = "❌ ${error["message"] ?: "Bilinmeyen hata"}"
                         } catch (e: Exception) {
                             setupStatus.text = "❌ Aktivasyon basarisiz (${response.code})"
