@@ -119,6 +119,10 @@
     .btn-primary {
       background: var(--accent-primary);
       color: white;
+    }
+
+    /* Form buttons should be full width */
+    form .btn-primary, .login-box .btn-primary {
       width: 100%;
     }
 
@@ -650,6 +654,116 @@
       font-weight: 600;
     }
 
+    /* Terminal Widget */
+    .terminal-widget {
+      margin-top: 24px;
+      background: #1e1e1e;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #2d2d2d;
+      border-bottom: 1px solid #3d3d3d;
+    }
+
+    .terminal-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #d4d4d4;
+    }
+
+    .terminal-icon {
+      color: #4ec9b0;
+      font-weight: bold;
+    }
+
+    .terminal-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-body {
+      padding: 12px;
+      background: #1e1e1e;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .terminal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terminal-body::-webkit-scrollbar-track {
+      background: #2d2d2d;
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb {
+      background: #4d4d4d;
+      border-radius: 4px;
+    }
+
+    .terminal-line {
+      margin-bottom: 4px;
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+
+    .terminal-timestamp {
+      color: #858585;
+      font-size: 11px;
+    }
+
+    .terminal-level {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .terminal-level.info {
+      background: #1e3a8a;
+      color: #60a5fa;
+    }
+
+    .terminal-level.success {
+      background: #14532d;
+      color: #4ade80;
+    }
+
+    .terminal-level.warning {
+      background: #78350f;
+      color: #fbbf24;
+    }
+
+    .terminal-level.error {
+      background: #7f1d1d;
+      color: #f87171;
+    }
+
+    .terminal-message {
+      color: #d4d4d4;
+      flex: 1;
+    }
+
     /* Checkbox styling for permissions */
     .checkbox-group {
       display: flex;
@@ -729,23 +843,29 @@
     }
 
     /* Responsive */
-    /* Desktop - Sidebar open by default */
+    /* Desktop - Sidebar toggleable */
     @media (min-width: 769px) {
       .sidebar {
         left: 0;
         box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
       }
 
+      .sidebar.closed {
+        left: calc(-1 * var(--sidebar-width));
+        box-shadow: none;
+      }
+
       .main-content {
         margin-left: var(--sidebar-width);
+        transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      }
+
+      .main-content.expanded {
+        margin-left: 0;
       }
 
       .sidebar-overlay {
         display: none; /* No overlay needed on desktop */
-      }
-
-      .hamburger {
-        display: none; /* Hide hamburger on desktop */
       }
     }
 
@@ -881,12 +1001,24 @@
               <div class="stat-card-value" id="statSMS">0</div>
             </div>
           </div>
-          <h3 style="margin-bottom: 16px;">Son Aktiviteler</h3>
-          <div class="activity-list" id="recentActivity">
-            <div class="activity-item">
-              <div class="activity-icon">📊</div>
-              <div class="activity-content">
-                <div class="activity-text">Veriler yukleniyor...</div>
+          <!-- Terminal-style Activity Widget -->
+          <div class="terminal-widget">
+            <div class="terminal-header">
+              <div class="terminal-title">
+                <span class="terminal-icon">$</span>
+                <span>tail -f /var/log/sms-panel/activity.log</span>
+              </div>
+              <div class="terminal-controls">
+                <span class="terminal-dot" style="background: #ff5f57;"></span>
+                <span class="terminal-dot" style="background: #ffbd2e;"></span>
+                <span class="terminal-dot" style="background: #28ca42;"></span>
+              </div>
+            </div>
+            <div class="terminal-body" id="recentActivity">
+              <div class="terminal-line">
+                <span class="terminal-timestamp">[--:--:--]</span>
+                <span class="terminal-level info">INFO</span>
+                <span class="terminal-message">Waiting for activity...</span>
               </div>
             </div>
           </div>
@@ -1325,19 +1457,50 @@
       showToast('Cikis yapildi');
     });
 
-    // Sidebar Toggle
+    // Sidebar Toggle with localStorage
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const mainContent = document.querySelector('.main-content');
 
+    // Check if desktop
+    function isDesktop() {
+      return window.innerWidth > 768;
+    }
+
+    // Load sidebar state from localStorage
+    function loadSidebarState() {
+      const sidebarState = localStorage.getItem('sidebarOpen');
+      if (isDesktop()) {
+        // Desktop: default open, can be closed
+        if (sidebarState === 'false') {
+          sidebar.classList.add('closed');
+          mainContent.classList.add('expanded');
+        }
+      }
+    }
+
+    // Toggle sidebar
     document.getElementById('hamburgerBtn').addEventListener('click', () => {
-      sidebar.classList.toggle('open');
-      sidebarOverlay.classList.toggle('show');
+      if (isDesktop()) {
+        // Desktop behavior
+        sidebar.classList.toggle('closed');
+        mainContent.classList.toggle('expanded');
+        const isOpen = !sidebar.classList.contains('closed');
+        localStorage.setItem('sidebarOpen', isOpen);
+      } else {
+        // Mobile behavior
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('show');
+      }
     });
 
     sidebarOverlay.addEventListener('click', () => {
       sidebar.classList.remove('open');
       sidebarOverlay.classList.remove('show');
     });
+
+    // Load state on page load
+    loadSidebarState();
 
     // Profile Dropdown
     document.getElementById('profileBtn').addEventListener('click', () => {
@@ -1430,21 +1593,59 @@
         document.getElementById('statOnline').textContent = data.stats.onlineDevices;
         document.getElementById('statSMS').textContent = data.stats.totalSMS;
 
-        // Load recent activity
+        // Load recent activity - Terminal style
         const activityData = await api('/admin/activity-logs?limit=10');
         const activityList = document.getElementById('recentActivity');
-        activityList.innerHTML = activityData.activities.map(act => `
-          <div class="activity-item">
-            <div class="activity-icon">${getActivityIcon(act.action)}</div>
-            <div class="activity-content">
-              <div class="activity-text">${act.details || act.action}</div>
-              <div class="activity-time">${formatDate(act.timestamp)}</div>
+        activityList.innerHTML = activityData.activities.map(act => {
+          const time = new Date(act.timestamp);
+          const timeStr = time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const level = getActivityLevel(act.action);
+          const message = formatActivityMessage(act);
+
+          return `
+            <div class="terminal-line">
+              <span class="terminal-timestamp">[${timeStr}]</span>
+              <span class="terminal-level ${level}">${level}</span>
+              <span class="terminal-message">${message}</span>
             </div>
+          `;
+        }).join('') || `
+          <div class="terminal-line">
+            <span class="terminal-timestamp">[--:--:--]</span>
+            <span class="terminal-level info">INFO</span>
+            <span class="terminal-message">No activity yet</span>
           </div>
-        `).join('') || '<div class="activity-item"><div class="activity-content"><div class="activity-text">Henuz aktivite yok</div></div></div>';
+        `;
       } catch (error) {
         showToast(error.message, true);
       }
+    }
+
+    function getActivityLevel(action) {
+      const levels = {
+        'LOGIN': 'success',
+        'LOGOUT': 'info',
+        'USER_CREATE': 'success',
+        'USER_UPDATE': 'info',
+        'USER_DELETE': 'warning',
+        'DEVICE_CREATE': 'success',
+        'DEVICE_ACTIVATE': 'success',
+        'DEVICE_ONLINE': 'success',
+        'DEVICE_OFFLINE': 'warning',
+        'SMS_SYNC': 'info',
+        'PERMISSION_GRANT': 'success',
+        'PERMISSION_REVOKE': 'warning',
+        'ERROR': 'error'
+      };
+      return levels[action] || 'info';
+    }
+
+    function formatActivityMessage(act) {
+      const action = act.action;
+      const details = act.details || '';
+      const user = act.userId ? `by ${act.userId.name || act.userId.email}` : '';
+
+      return `${action.replace(/_/g, ' ')} ${details} ${user}`.trim();
     }
 
     function getActivityIcon(action) {
