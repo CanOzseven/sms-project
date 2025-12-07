@@ -606,12 +606,12 @@
       <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">Admin Girisi</p>
       <form id="loginForm">
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="loginEmail" placeholder="admin@ring-panel.com" required>
+          <label>Kullanici Adi</label>
+          <input type="text" id="loginUsername" placeholder="admin" required autocomplete="username">
         </div>
         <div class="form-group">
           <label>Sifre</label>
-          <input type="password" id="loginPassword" placeholder="******" required>
+          <input type="password" id="loginPassword" placeholder="******" required autocomplete="current-password">
         </div>
         <button type="submit" class="btn btn-primary">Giris Yap</button>
       </form>
@@ -735,8 +735,7 @@
             <table class="table">
               <thead>
                 <tr>
-                  <th>Ad Soyad</th>
-                  <th>Email</th>
+                  <th>Kullanici Adi</th>
                   <th>Rol</th>
                   <th>Durum</th>
                   <th>Yetkili Cihaz</th>
@@ -848,12 +847,8 @@
         <form id="userForm">
           <input type="hidden" id="userId">
           <div class="form-group">
-            <label>Ad Soyad</label>
-            <input type="text" id="userName" required>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="userEmail" required>
+            <label>Kullanici Adi</label>
+            <input type="text" id="userUsername" required placeholder="kullanici_adi" pattern="[a-z0-9_-]+" title="Sadece kucuk harf, rakam, tire ve alt cizgi">
           </div>
           <div class="form-group">
             <label>Sifre</label>
@@ -1023,8 +1018,8 @@
       try {
         const data = await api('/admin/me');
         currentUser = data.user;
-        document.getElementById('profileName').textContent = currentUser.name;
-        document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = currentUser.username;
+        document.getElementById('profileAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
         showAppPage();
         loadDashboard();
         return true;
@@ -1049,19 +1044,19 @@
     // Login
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
+      const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
       const errorEl = document.getElementById('loginError');
 
       try {
-        const data = await api('/admin/login', 'POST', { email, password });
+        const data = await api('/admin/login', 'POST', { username, password });
         token = data.token;
         localStorage.setItem('adminToken', token);
         currentUser = data.user;
         errorEl.style.display = 'none';
         showAppPage();
-        document.getElementById('profileName').textContent = currentUser.name;
-        document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = currentUser.username;
+        document.getElementById('profileAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
         loadDashboard();
         showToast('Giris basarili!');
       } catch (error) {
@@ -1185,8 +1180,7 @@
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = data.users.map(user => `
           <tr>
-            <td>${user.name}</td>
-            <td>${user.email}</td>
+            <td>${user.username}</td>
             <td>${user.role === 'admin' ? 'Admin' : 'Kullanici'}</td>
             <td><span class="status-badge status-${user.status}">${user.status === 'active' ? 'Aktif' : 'Pasif'}</span></td>
             <td>${user.authorizedDevices?.length || 0} cihaz</td>
@@ -1232,8 +1226,7 @@
         const user = data.user;
         document.getElementById('userModalTitle').textContent = 'Kullaniciyi Duzenle';
         document.getElementById('userId').value = user._id;
-        document.getElementById('userName').value = user.name;
-        document.getElementById('userEmail').value = user.email;
+        document.getElementById('userUsername').value = user.username;
         document.getElementById('userPassword').value = '';
         document.getElementById('userPassword').required = false;
         document.getElementById('userRole').value = user.role;
@@ -1256,8 +1249,7 @@
     async function saveUser() {
       const id = document.getElementById('userId').value;
       const userData = {
-        name: document.getElementById('userName').value,
-        email: document.getElementById('userEmail').value,
+        username: document.getElementById('userUsername').value,
         role: document.getElementById('userRole').value,
         status: document.getElementById('userStatus').value,
         authorizedDevices: Array.from(document.querySelectorAll('#userDevicesCheckbox input:checked')).map(cb => cb.value)
@@ -1388,10 +1380,10 @@
         const tbody = document.getElementById('permissionsTableBody');
         tbody.innerHTML = data.permissions.map(perm => `
           <tr>
-            <td>${perm.userId?.name || '-'} (${perm.userId?.email || ''})</td>
+            <td>${perm.userId?.username || '-'}</td>
             <td>${perm.deviceId?.name || '-'}</td>
             <td>${formatDate(perm.grantedAt)}</td>
-            <td>${perm.grantedBy?.name || 'Sistem'}</td>
+            <td>${perm.grantedBy?.username || 'Sistem'}</td>
             <td class="action-btns">
               <button class="btn btn-danger btn-sm" onclick="revokePermission('${perm.userId?._id}', '${perm.deviceId?._id}')">Yetkiyi Kaldir</button>
             </td>
@@ -1412,7 +1404,7 @@
 
         const userSelect = document.getElementById('permissionUser');
         userSelect.innerHTML = '<option value="">Kullanici Secin</option>' +
-          usersData.users.filter(u => u.role === 'user').map(u => `<option value="${u._id}">${u.name} (${u.email})</option>`).join('');
+          usersData.users.filter(u => u.role === 'user').map(u => `<option value="${u._id}">${u.username}</option>`).join('');
 
         const deviceSelect = document.getElementById('permissionDevice');
         deviceSelect.innerHTML = '<option value="">Cihaz Secin</option>' +
@@ -1491,7 +1483,7 @@
             <div class="activity-content">
               <div class="activity-text">
                 <strong>${act.action}</strong> - ${act.details || ''}
-                ${act.userId ? `<br><small>Kullanici: ${act.userId.name || act.userId.email}</small>` : ''}
+                ${act.userId ? `<br><small>Kullanici: ${act.userId.username}</small>` : ''}
               </div>
               <div class="activity-time">${formatDate(act.timestamp)} - IP: ${act.ipAddress || 'Bilinmiyor'}</div>
             </div>
