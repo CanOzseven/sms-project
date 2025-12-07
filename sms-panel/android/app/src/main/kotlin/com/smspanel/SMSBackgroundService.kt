@@ -247,17 +247,21 @@ class SMSBackgroundService : Service() {
 
                     val result = gson.fromJson(body, Map::class.java)
                     val synced = (result["synced"] as? Double)?.toInt() ?: 0
+                    val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
+
+                    // En yeni SMS'in timestamp'ini bul (gönderdiğimiz mesajlardan)
+                    val newestTimestamp = messages.maxOfOrNull { (it["timestamp"] as? Long) ?: 0L } ?: System.currentTimeMillis()
 
                     // İstatistikleri güncelle
                     val totalSynced = prefs.getInt("syncedSms", 0) + synced
                     prefs.edit()
                         .putInt("syncedSms", totalSynced)
                         .putLong("lastSync", System.currentTimeMillis())
-                        .putLong("lastSyncTimestamp", System.currentTimeMillis())
+                        .putLong("lastSyncTimestamp", newestTimestamp) // En yeni SMS timestamp'i kullan
                         .apply()
 
-                    android.util.Log.d("SMSPanel", "✓ $synced SMS senkronize edildi (Toplam: $totalSynced)")
-                    sendLogBroadcast("✓ $synced SMS senkronize edildi (Toplam: $totalSynced)")
+                    android.util.Log.d("SMSPanel", "✓ $synced SMS senkronize edildi, $duplicates duplicate (Toplam: $totalSynced)")
+                    sendLogBroadcast("✓ $synced yeni SMS, $duplicates duplicate (Toplam: $totalSynced)")
                 } else {
                     android.util.Log.e("SMSPanel", "✗ Sync başarısız: ${response.code} - ${response.message}")
                     android.util.Log.e("SMSPanel", "Response body: ${response.body?.string()}")
