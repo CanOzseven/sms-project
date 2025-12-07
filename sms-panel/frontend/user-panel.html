@@ -775,6 +775,7 @@
             <div class="chat-header-status" id="chatStatus">-</div>
           </div>
           <button class="icon-btn" id="markReadBtn" title="Tumu okundu">✓</button>
+          <button class="icon-btn" id="deleteConversationBtn" title="Konusmayi sil" style="color: var(--error-color);">🗑️</button>
         </div>
         <div class="chat-messages" id="chatMessages">
         </div>
@@ -1190,6 +1191,29 @@
       }
     }
 
+    // Delete conversation
+    async function deleteConversation() {
+      if (!currentDevice || !currentConversation) return;
+
+      const confirmDelete = confirm(`${currentConversation} ile olan tüm konuşmayı silmek istediğinize emin misiniz?`);
+      if (!confirmDelete) return;
+
+      try {
+        const result = await api(`/user/sms/${currentDevice.id}/conversation/${encodeURIComponent(currentConversation)}`, 'DELETE');
+        showToast(`Konuşma silindi (${result.deletedCount} mesaj)`);
+
+        // Return to empty state
+        showEmptyState();
+        currentConversation = null;
+
+        // Reload conversations
+        loadConversations();
+        loadDevices();
+      } catch (error) {
+        showToast(error.message, true);
+      }
+    }
+
     // Show empty state
     function showEmptyState() {
       document.getElementById('emptyState').style.display = 'flex';
@@ -1212,6 +1236,9 @@
 
     // Mark all read button
     document.getElementById('markReadBtn').addEventListener('click', markConversationRead);
+
+    // Delete conversation button
+    document.getElementById('deleteConversationBtn').addEventListener('click', deleteConversation);
 
     // Mobile back button
     document.getElementById('backBtn').addEventListener('click', () => {

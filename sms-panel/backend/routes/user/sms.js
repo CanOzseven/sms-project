@@ -248,6 +248,57 @@ router.put('/:deviceId/conversation/:phoneNumber/read-all', async (req, res) => 
 });
 
 /**
+ * DELETE /api/user/sms/:deviceId/conversation/:phoneNumber
+ * Konuşmayı sil
+ */
+router.delete('/:deviceId/conversation/:phoneNumber', async (req, res) => {
+  try {
+    const { deviceId, phoneNumber } = req.params;
+
+    // Yetki kontrolü
+    const hasPermission = await Permission.hasPermission(req.user._id, deviceId);
+
+    if (!hasPermission && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu cihaza erişim yetkiniz yok'
+      });
+    }
+
+    const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+
+    // Konuşmayı sil
+    const result = await SMS.deleteMany({
+      deviceId,
+      phoneNumber: decodedPhoneNumber
+    });
+
+    // Log
+    const { logActivity } = require('../../services/activityLogger');
+    await logActivity(
+      req.user._id,
+      'CONVERSATION_DELETE',
+      `${decodedPhoneNumber} ile olan konuşma silindi (${result.deletedCount} mesaj)`,
+      req,
+      null,
+      deviceId
+    );
+
+    res.json({
+      success: true,
+      message: 'Konuşma silindi',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Conversation delete hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+/**
  * GET /api/user/sms/unread/count
  * Tüm yetkili cihazlardaki okunmamış SMS sayısı
  */
