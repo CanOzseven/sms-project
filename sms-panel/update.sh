@@ -30,7 +30,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Kurulum dizini
-INSTALL_DIR="/opt/sms-panel"
+INSTALL_DIR="/root/sms-project"
 
 # Dizin kontrolü
 if [ ! -d "$INSTALL_DIR" ]; then

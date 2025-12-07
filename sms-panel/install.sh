@@ -30,9 +30,9 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Kurulum dizini
-INSTALL_DIR="/opt/sms-panel"
+INSTALL_DIR="/root/sms-project"
 REPO_URL="https://github.com/CanOzseven/sms-project.git"
-BRANCH="claude/sms-panel-system-011tuBw3oiSKT358eGxwjrBX"
+BRANCH="claude/fix-veriyor-login-fetch-01DLFeXF7zGqnBMyW7bZ711c"
 
 echo "1. Sistem güncelleniyor..."
 apt-get update -qq
