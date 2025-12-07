@@ -1054,19 +1054,31 @@
         const data = await api('/user/devices');
         devices = data.devices;
 
-        const tabsContainer = document.getElementById('deviceTabs');
-        tabsContainer.innerHTML = devices.map((device, index) => `
-          <div class="device-tab ${index === 0 ? 'active' : ''}" data-device-id="${device.id}">
-            <span class="device-status ${device.status}"></span>
-            <span>${device.name}</span>
-            ${device.unreadCount > 0 ? `<span class="unread-badge">${device.unreadCount}</span>` : ''}
-          </div>
-        `).join('') || '<div style="padding: 16px; color: var(--text-secondary);">Yetkili cihaz yok</div>';
+        // Remember current device ID before re-rendering tabs
+        const currentDeviceId = currentDevice?.id;
 
-        // Set first device as current
+        const tabsContainer = document.getElementById('deviceTabs');
+        tabsContainer.innerHTML = devices.map((device, index) => {
+          // If we have a current device, use it; otherwise use first device
+          const isActive = currentDeviceId ? device.id === currentDeviceId : index === 0;
+          return `
+            <div class="device-tab ${isActive ? 'active' : ''}" data-device-id="${device.id}">
+              <span class="device-status ${device.status}"></span>
+              <span>${device.name}</span>
+              ${device.unreadCount > 0 ? `<span class="unread-badge">${device.unreadCount}</span>` : ''}
+            </div>
+          `;
+        }).join('') || '<div style="padding: 16px; color: var(--text-secondary);">Yetkili cihaz yok</div>';
+
+        // Set first device as current if none selected
         if (devices.length > 0 && !currentDevice) {
           currentDevice = devices[0];
           loadConversations();
+        }
+
+        // Update currentDevice reference with fresh data
+        if (currentDevice) {
+          currentDevice = devices.find(d => d.id === currentDevice.id) || devices[0];
         }
 
         // Tab click handlers
