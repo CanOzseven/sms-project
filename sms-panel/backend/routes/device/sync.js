@@ -52,12 +52,14 @@ router.post('/sms', deviceAuth, async (req, res) => {
       const hash = Buffer.from(hashData).toString('base64').substring(0, 32);
 
       // Hash zaten varsa atla
+      /*
       if (existingHashes.has(hash)) continue;
       existingHashes.add(hash);
 
       // Veritabanında var mı kontrol et
       const exists = await SMS.findOne({ messageHash: hash });
       if (exists) continue;
+      */
 
       smsDoc.messageHash = hash;
       processedMessages.push(smsDoc);
