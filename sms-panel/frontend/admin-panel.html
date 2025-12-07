@@ -92,7 +92,28 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:active::after {
+      width: 300px;
+      height: 300px;
     }
 
     .btn-primary {
@@ -103,6 +124,13 @@
 
     .btn-primary:hover {
       background: var(--accent-secondary);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .btn-secondary {
@@ -144,12 +172,14 @@
       position: fixed;
       left: -280px;
       top: 0;
-      transition: left 0.3s;
+      transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 0.3s ease;
       z-index: 1000;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0);
     }
 
     .sidebar.open {
       left: 0;
+      box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
     }
 
     .sidebar-header {
@@ -173,13 +203,39 @@
       padding: 14px 20px;
       color: var(--text-secondary);
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+      border-left: 3px solid transparent;
+      position: relative;
+      overflow: hidden;
     }
 
-    .menu-item:hover, .menu-item.active {
+    .menu-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--accent-primary);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      z-index: -1;
+    }
+
+    .menu-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      transform: translateX(4px);
+    }
+
+    .menu-item.active {
       background: var(--bg-tertiary);
       color: var(--accent-primary);
-      border-left: 3px solid var(--accent-primary);
+      border-left-color: var(--accent-primary);
+    }
+
+    .menu-item:active {
+      transform: translateX(2px);
     }
 
     .menu-item span {
@@ -208,13 +264,20 @@
       gap: 5px;
       cursor: pointer;
       padding: 10px;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+
+    .hamburger:hover {
+      background: var(--bg-tertiary);
     }
 
     .hamburger span {
       width: 24px;
       height: 2px;
       background: var(--text-primary);
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      border-radius: 2px;
     }
 
     .top-bar-right {
@@ -406,15 +469,22 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
+      background: rgba(0, 0, 0, 0);
+      display: flex;
       justify-content: center;
       align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
       z-index: 2000;
+      backdrop-filter: blur(0px);
     }
 
     .modal-overlay.show {
-      display: flex;
+      background: rgba(0, 0, 0, 0.7);
+      opacity: 1;
+      visibility: visible;
+      backdrop-filter: blur(4px);
     }
 
     .modal {
@@ -424,6 +494,13 @@
       max-width: 500px;
       max-height: 90vh;
       overflow-y: auto;
+      transform: scale(0.9) translateY(-20px);
+      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-overlay.show .modal {
+      transform: scale(1) translateY(0);
     }
 
     .modal-header {
@@ -572,13 +649,19 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
+      background: rgba(0, 0, 0, 0);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
       z-index: 999;
+      backdrop-filter: blur(0px);
     }
 
     .sidebar-overlay.show {
-      display: block;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 1;
+      visibility: visible;
+      backdrop-filter: blur(2px);
     }
 
     /* Responsive */
