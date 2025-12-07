@@ -124,7 +124,7 @@ router.post('/sms', deviceAuth, async (req, res) => {
  */
 router.post('/sms/single', deviceAuth, async (req, res) => {
   try {
-    const { phoneNumber, contactName, message, type, timestamp } = req.body;
+    const { smsId, phoneNumber, contactName, message, type, timestamp } = req.body;
     const device = req.device;
 
     // Validation
@@ -138,6 +138,7 @@ router.post('/sms/single', deviceAuth, async (req, res) => {
     // SMS oluştur
     const smsDoc = {
       deviceId: device._id,
+      smsId: smsId || null,
       phoneNumber,
       contactName: contactName || '',
       message,
@@ -146,13 +147,18 @@ router.post('/sms/single', deviceAuth, async (req, res) => {
       receivedAt: new Date()
     };
 
-    // Hash oluştur ve duplicate kontrolü
-    const hashData = `${smsDoc.deviceId}${smsDoc.phoneNumber}${smsDoc.timestamp}${smsDoc.message.substring(0, 50)}`;
-    const hash = Buffer.from(hashData).toString('base64').substring(0, 32);
-    smsDoc.messageHash = hash;
+    // Duplicate kontrolü - smsId varsa onu kullan, yoksa hash
+    let exists = null;
+    if (smsDoc.smsId) {
+      exists = await SMS.findOne({ deviceId: device._id, smsId: smsDoc.smsId });
+    } else {
+      // Hash oluştur ve duplicate kontrolü
+      const hashData = `${smsDoc.deviceId}${smsDoc.phoneNumber}${smsDoc.timestamp}${smsDoc.message.substring(0, 50)}`;
+      const hash = Buffer.from(hashData).toString('base64').substring(0, 32);
+      smsDoc.messageHash = hash;
+      exists = await SMS.findOne({ messageHash: hash });
+    }
 
-    // Veritabanında var mı kontrol et
-    const exists = await SMS.findOne({ messageHash: hash });
     if (exists) {
       return res.json({
         success: true,

