@@ -39,12 +39,19 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * PUT /api/user/profile
- * Kullanıcı profilini güncelle
+ * POST /api/user/profile/change-password
+ * Kullanıcı şifresini değiştir
  */
-router.put('/', async (req, res) => {
+router.post('/change-password', async (req, res) => {
   try {
-    const { name, email, currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mevcut şifre ve yeni şifre gerekli'
+      });
+    }
 
     const user = await User.findById(req.user._id);
 
@@ -55,27 +62,84 @@ router.put('/', async (req, res) => {
       });
     }
 
-    // İsim güncelleme
-    if (name && name.trim()) {
-      user.name = name.trim();
+    // Mevcut şifre kontrolü
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mevcut şifreniz yanlış'
+      });
     }
 
-    // Email güncelleme
-    if (email && email.toLowerCase() !== user.email) {
-      // Email kullanılıyor mu kontrol et
+    // Yeni şifre minimum uzunluk kontrolü
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Yeni şifre en az 6 karakter olmalıdır'
+      });
+    }
+
+    // Yeni şifreyi hashle
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+
+    // Log
+    await logActivity(
+      user._id,
+      'PASSWORD_CHANGE',
+      'Kullanıcı şifresini değiştirdi',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'Şifre başarıyla değiştirildi'
+    });
+  } catch (error) {
+    console.error('Password change hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+/**
+ * PUT /api/user/profile
+ * Kullanıcı profilini güncelle
+ */
+router.put('/', async (req, res) => {
+  try {
+    const { username, currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı'
+      });
+    }
+
+    // Username güncelleme
+    if (username && username.toLowerCase() !== user.username) {
+      // Username kullanılıyor mu kontrol et
       const existingUser = await User.findOne({
-        email: email.toLowerCase(),
+        username: username.toLowerCase(),
         _id: { $ne: user._id }
       });
 
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Bu email adresi zaten kullanılıyor'
+          message: 'Bu kullanıcı adı zaten kullanılıyor'
         });
       }
 
-      user.email = email.toLowerCase();
+      user.username = username.toLowerCase();
     }
 
     // Şifre güncelleme
@@ -125,8 +189,7 @@ router.put('/', async (req, res) => {
       message: 'Profil güncellendi',
       user: {
         id: user._id,
-        name: user.name,
-        email: user.email,
+        username: user.username,
         role: user.role
       }
     });
