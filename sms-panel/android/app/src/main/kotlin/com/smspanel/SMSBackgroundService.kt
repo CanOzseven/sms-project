@@ -32,8 +32,8 @@ class SMSBackgroundService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "sms_panel_channel"
-        private const val HEARTBEAT_INTERVAL = 5 * 60 * 1000L // 5 dakika
-        private const val SYNC_INTERVAL = 15 * 60 * 1000L // 15 dakika
+        private const val HEARTBEAT_INTERVAL = 30 * 1000L // 30 saniye
+        private const val SYNC_INTERVAL = 5 * 1000L // 5 saniye
     }
 
     override fun onCreate() {
@@ -45,14 +45,16 @@ class SMSBackgroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification())
 
+        // İlk heartbeat'i hemen at
+        scope.launch {
+            sendHeartbeat()
+            delay(1000) // 1 saniye bekle
+            syncAllSMS() // İlk sync'i de hemen yap
+        }
+
+        // Periyodik çalışmaları başlat
         startHeartbeat()
         startPeriodicSync()
-
-        // İlk sync'i hemen yap
-        scope.launch {
-            delay(5000) // 5 saniye bekle
-            syncAllSMS()
-        }
 
         return START_STICKY
     }
