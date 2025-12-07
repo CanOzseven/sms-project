@@ -596,6 +596,52 @@
         gap: 16px;
       }
     }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--bg-tertiary);
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
   </style>
 </head>
 <body>
@@ -667,6 +713,7 @@
               <span id="profileName">Admin</span>
             </div>
             <div class="dropdown-menu" id="profileDropdown">
+              <div class="dropdown-item" id="settingsBtn">Ayarlar</div>
               <div class="dropdown-item" id="accountSettingsBtn">Hesap Ayarlari</div>
               <div class="dropdown-item" id="logoutBtn">Cikis Yap</div>
             </div>
@@ -936,6 +983,28 @@
     </div>
   </div>
 
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Ayarlar</h3>
+        <span class="modal-close" onclick="closeModal('settingsModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+          <div>
+            <div style="font-weight: 500;">Otomatik Yenileme</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">5 saniyede bir verileri yenile</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoRefreshToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -1071,6 +1140,53 @@
       showToast('Cikis yapildi');
     });
 
+    // Settings Button
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      openModal('settingsModal');
+      document.getElementById('profileDropdown').classList.remove('show');
+    });
+
+    // Auto-Refresh Toggle
+    let pollingInterval = null;
+    let currentPage = 'dashboard';
+
+    const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+    autoRefreshToggle.checked = localStorage.getItem('adminAutoRefreshEnabled') !== 'false';
+    autoRefreshToggle.addEventListener('change', (e) => {
+      localStorage.setItem('adminAutoRefreshEnabled', e.target.checked);
+      if (e.target.checked) {
+        startPolling();
+        showToast('Otomatik yenileme açıldı');
+      } else {
+        stopPolling();
+        showToast('Otomatik yenileme kapatıldı');
+      }
+    });
+
+    function startPolling() {
+      // Don't start if already polling or if auto-refresh is disabled
+      if (pollingInterval) return;
+      if (localStorage.getItem('adminAutoRefreshEnabled') === 'false') return;
+
+      pollingInterval = setInterval(() => {
+        // Reload current page data
+        switch (currentPage) {
+          case 'dashboard': loadDashboard(); break;
+          case 'users': loadUsers(); break;
+          case 'devices': loadDevices(); break;
+          case 'permissions': loadPermissions(); break;
+          case 'sms': loadSMS(); break;
+        }
+      }, 5000); // Poll every 5 seconds
+    }
+
+    function stopPolling() {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    }
+
     // Sidebar Toggle
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -1113,6 +1229,9 @@
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('show');
 
+        // Update current page for auto-refresh
+        currentPage = page;
+
         // Load page data
         switch (page) {
           case 'dashboard': loadDashboard(); break;
@@ -1124,6 +1243,11 @@
         }
       });
     });
+
+    // Start polling on initial load
+    if (localStorage.getItem('adminAutoRefreshEnabled') !== 'false') {
+      startPolling();
+    }
 
     // Dashboard
     async function loadDashboard() {
