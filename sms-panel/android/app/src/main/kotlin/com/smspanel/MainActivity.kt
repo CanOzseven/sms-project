@@ -1,7 +1,10 @@
 package com.smspanel
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,6 +16,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.content.Context.RECEIVER_NOT_EXPORTED
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import okhttp3.*
@@ -49,8 +53,20 @@ class MainActivity : AppCompatActivity() {
     private var startTime: Long = 0
     private var uptimeRunnable: Runnable? = null
 
+    private val logReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val message = intent?.getStringExtra(EXTRA_LOG_MESSAGE) ?: return
+            runOnUiThread {
+                addLogEntry(message)
+            }
+        }
+    }
+
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
+        const val ACTION_LOG = "com.smspanel.ACTION_LOG"
+        const val EXTRA_LOG_MESSAGE = "log_message"
+
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
@@ -358,8 +374,26 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        // Register broadcast receiver for logs
+        val filter = IntentFilter(ACTION_LOG)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(logReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(logReceiver, filter)
+        }
+
         if (activeScreen.visibility == View.VISIBLE) {
             updateStats()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        try {
+            unregisterReceiver(logReceiver)
+        } catch (e: Exception) {
+            // Already unregistered
         }
     }
 

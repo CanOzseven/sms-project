@@ -49,14 +49,18 @@ class SMSBackgroundService : Service() {
         android.util.Log.d("SMSPanel", "Sync interval: ${SYNC_INTERVAL / 1000} saniye")
         android.util.Log.d("SMSPanel", "========================================")
 
+        sendLogBroadcast("⚡ Servis başlatıldı (Heartbeat: ${HEARTBEAT_INTERVAL / 1000}s, Sync: ${SYNC_INTERVAL / 1000}s)")
+
         startForeground(NOTIFICATION_ID, createNotification())
 
         // İlk heartbeat'i hemen at
         scope.launch {
             android.util.Log.d("SMSPanel", "İlk heartbeat gönderiliyor...")
+            sendLogBroadcast("📡 İlk heartbeat gönderiliyor...")
             sendHeartbeat()
             delay(1000) // 1 saniye bekle
             android.util.Log.d("SMSPanel", "İlk SMS sync başlatılıyor...")
+            sendLogBroadcast("🔄 İlk SMS sync başlatılıyor...")
             syncAllSMS() // İlk sync'i de hemen yap
         }
 
@@ -74,6 +78,12 @@ class SMSBackgroundService : Service() {
         heartbeatJob?.cancel()
         syncJob?.cancel()
         scope.cancel()
+    }
+
+    private fun sendLogBroadcast(message: String) {
+        val intent = Intent(MainActivity.ACTION_LOG)
+        intent.putExtra(MainActivity.EXTRA_LOG_MESSAGE, message)
+        sendBroadcast(intent)
     }
 
     private fun createNotificationChannel() {
@@ -163,15 +173,18 @@ class SMSBackgroundService : Service() {
                 val duration = System.currentTimeMillis() - startTime
                 if (response.isSuccessful) {
                     android.util.Log.d("SMSPanel", "✓ Heartbeat başarılı (${duration}ms)")
+                    sendLogBroadcast("✓ Heartbeat başarılı (${duration}ms)")
                 } else {
                     android.util.Log.e("SMSPanel", "✗ Heartbeat başarısız: ${response.code} - ${response.message}")
                     android.util.Log.e("SMSPanel", "Response body: ${response.body?.string()}")
+                    sendLogBroadcast("✗ Heartbeat başarısız: ${response.code}")
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("SMSPanel", "✗ Heartbeat EXCEPTION: ${e.javaClass.simpleName}")
             android.util.Log.e("SMSPanel", "✗ Heartbeat hatası: ${e.message}")
             e.printStackTrace()
+            sendLogBroadcast("✗ Heartbeat hatası: ${e.message}")
         }
     }
 
@@ -200,6 +213,7 @@ class SMSBackgroundService : Service() {
         }
 
         android.util.Log.d("SMSPanel", ">>> ${messages.size} SMS SENKRONIZE EDILECEK <<<")
+        sendLogBroadcast("📤 ${messages.size} SMS senkronize ediliyor...")
 
         val url = "$serverUrl/api/device/sms"
         val json = gson.toJson(mapOf("messages" to messages))
@@ -243,15 +257,18 @@ class SMSBackgroundService : Service() {
                         .apply()
 
                     android.util.Log.d("SMSPanel", "✓ $synced SMS senkronize edildi (Toplam: $totalSynced)")
+                    sendLogBroadcast("✓ $synced SMS senkronize edildi (Toplam: $totalSynced)")
                 } else {
                     android.util.Log.e("SMSPanel", "✗ Sync başarısız: ${response.code} - ${response.message}")
                     android.util.Log.e("SMSPanel", "Response body: ${response.body?.string()}")
+                    sendLogBroadcast("✗ Sync başarısız: ${response.code}")
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("SMSPanel", "✗ SMS SYNC EXCEPTION: ${e.javaClass.simpleName}")
             android.util.Log.e("SMSPanel", "✗ SMS sync hatası: ${e.message}")
             e.printStackTrace()
+            sendLogBroadcast("✗ Sync hatası: ${e.message}")
         }
     }
 
@@ -351,6 +368,8 @@ class SMSBackgroundService : Service() {
         scope.launch {
             val serverUrl = prefs.getString("serverUrl", null) ?: return@launch
             val activationCode = prefs.getString("activationCode", null) ?: return@launch
+
+            sendLogBroadcast("📨 Yeni SMS alındı: ${contactName.ifEmpty { phoneNumber }}")
 
             val url = "$serverUrl/api/device/sms/single"
             val json = gson.toJson(mapOf(
