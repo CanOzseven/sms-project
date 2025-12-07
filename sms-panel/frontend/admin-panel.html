@@ -642,6 +642,113 @@
     input:checked + .toggle-slider:before {
       transform: translateX(26px);
     }
+
+    /* Permission Cards */
+    .permission-user-section {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .permission-user-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .permission-user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      color: white;
+    }
+
+    .permission-user-info h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .permission-user-info p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .permission-devices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+
+    .permission-device-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .permission-device-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .permission-device-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--danger);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      transition: all 0.2s;
+    }
+
+    .permission-device-close:hover {
+      background: #dc3545;
+      transform: scale(1.1);
+    }
+
+    .permission-device-name {
+      font-weight: 500;
+      font-size: 15px;
+      margin-bottom: 8px;
+      padding-right: 30px;
+    }
+
+    .permission-device-info {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .permission-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
   </style>
 </head>
 <body>
@@ -823,20 +930,7 @@
             <h1 class="page-title">Yetkiler</h1>
             <button class="btn btn-primary" id="addPermissionBtn">+ Yetki Ver</button>
           </div>
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Kullanici</th>
-                  <th>Cihaz</th>
-                  <th>Yetki Tarihi</th>
-                  <th>Veren</th>
-                  <th>Islemler</th>
-                </tr>
-              </thead>
-              <tbody id="permissionsTableBody">
-              </tbody>
-            </table>
+          <div id="permissionsContainer" style="display: flex; flex-direction: column; gap: 24px;">
           </div>
         </div>
 
@@ -1498,18 +1592,54 @@
     async function loadPermissions() {
       try {
         const data = await api('/admin/permissions');
-        const tbody = document.getElementById('permissionsTableBody');
-        tbody.innerHTML = data.permissions.map(perm => `
-          <tr>
-            <td>${perm.userId?.username || '-'}</td>
-            <td>${perm.deviceId?.name || '-'}</td>
-            <td>${formatDate(perm.grantedAt)}</td>
-            <td>${perm.grantedBy?.username || 'Sistem'}</td>
-            <td class="action-btns">
-              <button class="btn btn-danger btn-sm" onclick="revokePermission('${perm.userId?._id}', '${perm.deviceId?._id}')">Yetkiyi Kaldir</button>
-            </td>
-          </tr>
-        `).join('') || '<tr><td colspan="5" style="text-align: center;">Henuz yetki tanimlanmamis</td></tr>';
+        const container = document.getElementById('permissionsContainer');
+
+        if (!data.permissions || data.permissions.length === 0) {
+          container.innerHTML = '<div class="permission-empty">Henüz yetki tanımlanmamış</div>';
+          return;
+        }
+
+        // Group permissions by user
+        const userPermissions = {};
+        data.permissions.forEach(perm => {
+          const userId = perm.userId?._id || perm.userId;
+          if (!userPermissions[userId]) {
+            userPermissions[userId] = {
+              user: perm.userId,
+              devices: []
+            };
+          }
+          userPermissions[userId].devices.push({
+            device: perm.deviceId,
+            grantedAt: perm.grantedAt,
+            grantedBy: perm.grantedBy
+          });
+        });
+
+        // Render user sections with device cards
+        container.innerHTML = Object.values(userPermissions).map(({ user, devices }) => `
+          <div class="permission-user-section">
+            <div class="permission-user-header">
+              <div class="permission-user-avatar">${(user?.username || 'U').charAt(0).toUpperCase()}</div>
+              <div class="permission-user-info">
+                <h3>${user?.username || 'Bilinmeyen Kullanıcı'}</h3>
+                <p>${devices.length} yetkili cihaz</p>
+              </div>
+            </div>
+            <div class="permission-devices-grid">
+              ${devices.map(({ device, grantedAt, grantedBy }) => `
+                <div class="permission-device-card">
+                  <button class="permission-device-close" onclick="revokePermission('${user?._id}', '${device?._id}')" title="Yetkiyi kaldır">×</button>
+                  <div class="permission-device-name">${device?.name || 'Bilinmeyen Cihaz'}</div>
+                  <div class="permission-device-info">
+                    <div>📅 ${formatDate(grantedAt)}</div>
+                    <div>👤 ${grantedBy?.username || 'Sistem'}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
       } catch (error) {
         showToast(error.message, true);
       }
