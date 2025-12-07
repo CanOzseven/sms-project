@@ -46,12 +46,20 @@ const smsSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  // Mesajın benzersiz ID'si (duplicate önleme için)
+  // Android SMS Database ID (benzersiz tanımlayıcı)
+  smsId: {
+    type: Number,
+    sparse: true // Eski kayıtlar için
+  },
+  // Mesajın benzersiz ID'si (duplicate önleme için - backward compatibility)
   messageHash: {
     type: String,
     index: true
   }
 });
+
+// Unique index: Aynı cihazdan aynı SMS ID gelmemeli
+smsSchema.index({ deviceId: 1, smsId: 1 }, { unique: true, sparse: true });
 
 // Kayıt öncesi hash oluştur (duplicate önleme)
 smsSchema.pre('save', function(next) {

@@ -279,6 +279,11 @@ class SMSBackgroundService : Service() {
     private fun readSMSMessages(sinceTimestamp: Long): List<Map<String, Any>> {
         val messages = mutableListOf<Map<String, Any>>()
 
+        // Daha önce gönderilmiş SMS ID'lerini al
+        val sentSmsIds = prefs.getStringSet("sentSmsIds", mutableSetOf()) ?: mutableSetOf()
+        val newSentIds = mutableSetOf<String>()
+        newSentIds.addAll(sentSmsIds)
+
         val uri = Telephony.Sms.CONTENT_URI
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -301,10 +306,17 @@ class SMSBackgroundService : Service() {
         try {
             contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 while (cursor.moveToNext()) {
+                    val smsId = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms._ID))
                     val address = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)) ?: continue
                     val body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)) ?: ""
                     val date = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE))
                     val type = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE))
+
+                    // Bu SMS daha önce gönderilmiş mi kontrol et
+                    if (sentSmsIds.contains(smsId.toString())) {
+                        android.util.Log.d("SMSPanel", "SMS ID $smsId zaten gönderilmiş, atlanıyor")
+                        continue
+                    }
 
                     val smsType = when (type) {
                         Telephony.Sms.MESSAGE_TYPE_INBOX -> "received"
@@ -315,18 +327,27 @@ class SMSBackgroundService : Service() {
                     val contactName = getContactName(address)
 
                     messages.add(mapOf(
+                        "smsId" to smsId,
                         "phoneNumber" to address,
                         "contactName" to contactName,
                         "message" to body,
                         "type" to smsType,
                         "timestamp" to date
                     ))
+
+                    // Bu ID'yi gönderilmiş olarak işaretle
+                    newSentIds.add(smsId.toString())
                 }
             }
 
             // Toplam SMS sayısını güncelle
             val totalCount = getTotalSMSCount()
-            prefs.edit().putInt("totalSms", totalCount).apply()
+
+            // Gönderilmiş SMS ID'lerini kaydet
+            prefs.edit()
+                .putInt("totalSms", totalCount)
+                .putStringSet("sentSmsIds", newSentIds)
+                .apply()
 
         } catch (e: Exception) {
             android.util.Log.e("SMSPanel", "SMS okuma hatası: ${e.message}")

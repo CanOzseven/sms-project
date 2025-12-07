@@ -34,6 +34,7 @@ router.post('/sms', deviceAuth, async (req, res) => {
     // Mesajları hazırla
     const smsDocuments = messages.map(msg => ({
       deviceId: device._id,
+      smsId: msg.smsId || null, // Android SMS ID
       phoneNumber: msg.phoneNumber,
       contactName: msg.contactName || '',
       message: msg.message,
@@ -42,24 +43,37 @@ router.post('/sms', deviceAuth, async (req, res) => {
       receivedAt: new Date()
     }));
 
-    // Duplicate kontrolü için hash'leri oluştur
-    const existingHashes = new Set();
+    // Duplicate kontrolü
     const processedMessages = [];
+    const existingSmsIds = new Set();
 
     for (const smsDoc of smsDocuments) {
-      // Hash oluştur
-      const hashData = `${smsDoc.deviceId}${smsDoc.phoneNumber}${smsDoc.timestamp}${smsDoc.message.substring(0, 50)}`;
-      const hash = Buffer.from(hashData).toString('base64').substring(0, 32);
+      // Eğer smsId varsa, onu kullan (yeni sistem)
+      if (smsDoc.smsId) {
+        // Bu SMS ID bu cihazda zaten var mı?
+        if (existingSmsIds.has(smsDoc.smsId)) {
+          console.log(`SMS ID ${smsDoc.smsId} bu batch'te duplicate, atlanıyor`);
+          continue;
+        }
 
-      // Hash zaten varsa atla
-      if (existingHashes.has(hash)) continue;
-      existingHashes.add(hash);
+        const exists = await SMS.findOne({ deviceId: device._id, smsId: smsDoc.smsId });
+        if (exists) {
+          console.log(`SMS ID ${smsDoc.smsId} veritabanında mevcut, atlanıyor`);
+          continue;
+        }
 
-      // Veritabanında var mı kontrol et
-      const exists = await SMS.findOne({ messageHash: hash });
-      if (exists) continue;
+        existingSmsIds.add(smsDoc.smsId);
+      } else {
+        // Eski sistem için hash kullan (backward compatibility)
+        const hashData = `${smsDoc.deviceId}${smsDoc.phoneNumber}${smsDoc.timestamp}${smsDoc.message.substring(0, 50)}`;
+        const hash = Buffer.from(hashData).toString('base64').substring(0, 32);
 
-      smsDoc.messageHash = hash;
+        const exists = await SMS.findOne({ messageHash: hash });
+        if (exists) continue;
+
+        smsDoc.messageHash = hash;
+      }
+
       processedMessages.push(smsDoc);
     }
 
