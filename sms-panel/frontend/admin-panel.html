@@ -86,16 +86,16 @@
     }
 
     .btn {
-      padding: 12px 24px;
+      padding: 8px 16px;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
       position: relative;
       overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .btn::after {
@@ -124,7 +124,7 @@
 
     .btn-primary:hover {
       background: var(--accent-secondary);
-      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
       transform: translateY(-1px);
     }
 
@@ -139,14 +139,33 @@
       border: 1px solid var(--border-color);
     }
 
+    .btn-secondary:hover {
+      background: var(--bg-primary);
+      border-color: var(--accent-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transform: translateY(-1px);
+    }
+
     .btn-success {
       background: var(--success);
       color: white;
     }
 
+    .btn-success:hover {
+      background: #00b890;
+      box-shadow: 0 2px 8px rgba(0, 212, 170, 0.3);
+      transform: translateY(-1px);
+    }
+
     .btn-danger {
       background: var(--danger);
       color: white;
+    }
+
+    .btn-danger:hover {
+      background: #ff3142;
+      box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+      transform: translateY(-1px);
     }
 
     .btn-sm {
@@ -586,6 +605,51 @@
       color: var(--text-secondary);
     }
 
+    /* Account Settings */
+    .settings-container {
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .settings-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .settings-section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent-primary);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .info-item:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .info-value {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
     /* Checkbox styling for permissions */
     .checkbox-group {
       display: flex;
@@ -665,6 +729,26 @@
     }
 
     /* Responsive */
+    /* Desktop - Sidebar open by default */
+    @media (min-width: 769px) {
+      .sidebar {
+        left: 0;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-width);
+      }
+
+      .sidebar-overlay {
+        display: none; /* No overlay needed on desktop */
+      }
+
+      .hamburger {
+        display: none; /* Hide hamburger on desktop */
+      }
+    }
+
     @media (max-width: 768px) {
       .stats-grid {
         grid-template-columns: 1fr;
@@ -916,6 +1000,65 @@
           <div class="activity-list" id="activityList">
           </div>
         </div>
+
+        <!-- Account Settings Page -->
+        <div class="page" id="accountPage">
+          <div class="page-header">
+            <h1 class="page-title">Hesap Ayarlari</h1>
+          </div>
+          <div class="settings-container">
+            <div class="settings-section">
+              <h3 class="settings-section-title">Profil Bilgileri</h3>
+              <div class="form-group">
+                <label>Ad Soyad</label>
+                <input type="text" id="settingsName" readonly style="background: var(--bg-tertiary); cursor: not-allowed;">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="settingsEmail" readonly style="background: var(--bg-tertiary); cursor: not-allowed;">
+              </div>
+              <div class="form-group">
+                <label>Rol</label>
+                <input type="text" id="settingsRole" readonly style="background: var(--bg-tertiary); cursor: not-allowed;">
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-section-title">Şifre Değiştir</h3>
+              <form id="changePasswordForm">
+                <div class="form-group">
+                  <label>Mevcut Şifre</label>
+                  <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                  <label>Yeni Şifre</label>
+                  <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                  <label>Yeni Şifre (Tekrar)</label>
+                  <input type="password" id="confirmPassword" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary">Şifreyi Güncelle</button>
+              </form>
+            </div>
+
+            <div class="settings-section">
+              <h3 class="settings-section-title">Oturum Bilgileri</h3>
+              <div class="info-item">
+                <span class="info-label">Kullanıcı ID:</span>
+                <span class="info-value" id="settingsUserId">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Kayıt Tarihi:</span>
+                <span class="info-value" id="settingsCreatedAt">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Son Güncelleme:</span>
+                <span class="info-value" id="settingsUpdatedAt">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -1127,6 +1270,7 @@
         document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
         showAppPage();
         loadDashboard();
+        startAutoRefresh(); // Start auto-refresh on app load
         return true;
       } catch (error) {
         localStorage.removeItem('adminToken');
@@ -1163,6 +1307,7 @@
         document.getElementById('profileName').textContent = currentUser.name;
         document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
         loadDashboard();
+        startAutoRefresh(); // Start auto-refresh after login
         showToast('Giris basarili!');
       } catch (error) {
         errorEl.textContent = error.message;
@@ -1172,6 +1317,7 @@
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
+      stopAutoRefresh(); // Stop auto-refresh on logout
       localStorage.removeItem('adminToken');
       token = null;
       currentUser = null;
@@ -1204,10 +1350,50 @@
       }
     });
 
+    // Auto-refresh system
+    let refreshInterval = null;
+    let currentPage = 'dashboard';
+
+    function startAutoRefresh() {
+      stopAutoRefresh(); // Clear any existing interval
+
+      // Different refresh rates for different pages
+      const refreshRates = {
+        'dashboard': 10000,    // 10 seconds
+        'sms': 5000,          // 5 seconds
+        'devices': 10000,     // 10 seconds
+        'users': 30000,       // 30 seconds
+        'permissions': 30000, // 30 seconds
+        'activity': 10000     // 10 seconds
+      };
+
+      const rate = refreshRates[currentPage] || 30000;
+
+      refreshInterval = setInterval(() => {
+        // Load current page data
+        switch (currentPage) {
+          case 'dashboard': loadDashboard(); break;
+          case 'users': loadUsers(); break;
+          case 'devices': loadDevices(); break;
+          case 'permissions': loadPermissions(); break;
+          case 'sms': loadSMS(); break;
+          case 'activity': loadActivity(); break;
+        }
+      }, rate);
+    }
+
+    function stopAutoRefresh() {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    }
+
     // Page Navigation
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
         const page = item.dataset.page;
+        currentPage = page;
 
         // Update menu
         document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
@@ -1221,7 +1407,8 @@
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('show');
 
-        // Load page data
+        // Stop old refresh, load page data, start new refresh
+        stopAutoRefresh();
         switch (page) {
           case 'dashboard': loadDashboard(); break;
           case 'users': loadUsers(); break;
@@ -1230,6 +1417,7 @@
           case 'sms': loadSMS(); break;
           case 'activity': loadActivity(); break;
         }
+        startAutoRefresh();
       });
     });
 
@@ -1601,6 +1789,70 @@
         showToast(error.message, true);
       }
     }
+
+    // Account Settings
+    document.getElementById('accountSettingsBtn').addEventListener('click', () => {
+      // Close profile dropdown
+      document.getElementById('profileDropdown').classList.remove('show');
+
+      // Update menu (no menu item for account settings, it's in profile dropdown)
+      document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+
+      // Show account page
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('accountPage').classList.add('active');
+
+      // Load account settings
+      stopAutoRefresh(); // No auto-refresh on settings page
+      loadAccountSettings();
+    });
+
+    async function loadAccountSettings() {
+      try {
+        const data = await api('/admin/me');
+        const user = data.user;
+
+        document.getElementById('settingsName').value = user.name;
+        document.getElementById('settingsEmail').value = user.email;
+        document.getElementById('settingsRole').value = user.role === 'admin' ? 'Admin' : 'Kullanıcı';
+        document.getElementById('settingsUserId').textContent = user._id;
+        document.getElementById('settingsCreatedAt').textContent = formatDate(user.createdAt);
+        document.getElementById('settingsUpdatedAt').textContent = formatDate(user.updatedAt || user.createdAt);
+      } catch (error) {
+        showToast(error.message, true);
+      }
+    }
+
+    // Change Password Form
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (newPassword !== confirmPassword) {
+        showToast('Yeni şifreler eşleşmiyor!', true);
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast('Yeni şifre en az 6 karakter olmalı!', true);
+        return;
+      }
+
+      try {
+        await api('/admin/change-password', 'POST', {
+          currentPassword,
+          newPassword
+        });
+
+        showToast('Şifre başarıyla değiştirildi!');
+        document.getElementById('changePasswordForm').reset();
+      } catch (error) {
+        showToast(error.message, true);
+      }
+    });
 
     // Initialize
     checkAuth();
