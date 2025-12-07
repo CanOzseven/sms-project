@@ -607,3 +607,133 @@ logger.error('Database connection failed', { error: error.message });
 ---
 
 **For questions or issues, refer to the documentation or create an issue in the repository.**
+
+## 📱 Device Logout on Deletion (✅ IMPLEMENTED - Polling-based)
+
+When an admin deletes a device from the admin panel, the Android app will automatically logout on its next API request.
+
+### Backend Implementation
+
+The backend has been updated to return a special error response when a device is not found:
+
+```javascript
+// In middleware/auth.js - deviceAuth middleware
+if (!device) {
+  return res.status(401).json({
+    success: false,
+    error: 'DEVICE_NOT_FOUND',
+    message: 'Cihaz bulunamadı veya silindi. Lütfen yeniden giriş yapın.',
+    requiresLogout: true
+  });
+}
+```
+
+### Android App Integration
+
+**Required Changes in Android App:**
+
+1. **Update API Response Handler:**
+
+```kotlin
+// In your API client or interceptor
+fun handleApiResponse(response: Response): Result {
+    if (response.code == 401) {
+        val errorBody = response.errorBody()?.string()
+        val error = Json.decodeFromString<ErrorResponse>(errorBody)
+
+        if (error.requiresLogout == true || error.error == "DEVICE_NOT_FOUND") {
+            // Device has been deleted, perform logout
+            performDeviceLogout()
+        }
+    }
+    // ... rest of error handling
+}
+
+data class ErrorResponse(
+    val success: Boolean,
+    val error: String?,
+    val message: String?,
+    val requiresLogout: Boolean? = false
+)
+```
+
+2. **Implement Device Logout:**
+
+```kotlin
+private fun performDeviceLogout() {
+    // Clear stored activation code
+    sharedPreferences.edit()
+        .remove("activation_code")
+        .remove("device_id")
+        .apply()
+
+    // Stop background services
+    stopSmsSync()
+
+    // Navigate to login/activation screen
+    val intent = Intent(this, ActivationActivity::class.java)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    startActivity(intent)
+
+    // Show notification to user
+    showToast("Cihazınız sistemden kaldırıldı. Lütfen yeniden aktivasyon yapın.")
+}
+```
+
+3. **Handle in Sync Service:**
+
+```kotlin
+// In your SMS sync service
+private fun syncMessages() {
+    try {
+        val response = apiClient.syncSMS(messages)
+        if (response.isSuccessful) {
+            // Handle success
+        }
+    } catch (e: HttpException) {
+        if (e.code() == 401) {
+            val errorBody = e.response()?.errorBody()?.string()
+            val error = Json.decodeFromString<ErrorResponse>(errorBody)
+
+            if (error.requiresLogout == true) {
+                // Device deleted, stop service and logout
+                stopSelf()
+                sendLogoutBroadcast()
+            }
+        }
+    }
+}
+```
+
+### How It Works
+
+1. **Admin deletes device** from admin panel (DELETE /api/admin/devices/:id)
+2. **Device record is removed** from database
+3. **On next API request** (SMS sync, heartbeat, etc.):
+   - Android app sends activation code in header
+   - Backend looks for device with that activation code
+   - Device not found (deleted)
+   - Backend returns `401` with `requiresLogout: true`
+4. **Android app receives error:**
+   - Detects `requiresLogout` flag
+   - Clears local storage
+   - Stops background services
+   - Redirects to activation screen
+   - Shows user-friendly message
+
+### Testing
+
+1. Activate a device in Android app
+2. Login to admin panel
+3. Delete the device from Devices page
+4. Wait for next sync interval (or manually trigger sync)
+5. Android app should automatically logout and show activation screen
+
+### Notes
+
+- No WebSocket required - uses existing polling mechanism
+- Works with heartbeat, SMS sync, and any device API request
+- Graceful degradation - app continues to function if offline
+- User is informed about device removal
+- Secure - activation code becomes invalid immediately
+

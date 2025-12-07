@@ -117,7 +117,9 @@ const deviceAuth = async (req, res, next) => {
     if (!device) {
       return res.status(401).json({
         success: false,
-        message: 'Geçersiz aktivasyon kodu'
+        error: 'DEVICE_NOT_FOUND',
+        message: 'Cihaz bulunamadı veya silindi. Lütfen yeniden giriş yapın.',
+        requiresLogout: true
       });
     }
 
