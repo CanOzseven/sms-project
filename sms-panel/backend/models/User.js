@@ -2,19 +2,15 @@ const mongoose = require('mongoose');
 
 // Kullanıcı şeması - Admin ve normal kullanıcılar için
 const userSchema = new mongoose.Schema({
-  name: {
+  username: {
     type: String,
-    required: [true, 'İsim alanı zorunludur'],
-    trim: true,
-    minlength: [2, 'İsim en az 2 karakter olmalıdır']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email alanı zorunludur'],
+    required: [true, 'Kullanıcı adı alanı zorunludur'],
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Geçerli bir email adresi giriniz']
+    minlength: [3, 'Kullanıcı adı en az 3 karakter olmalıdır'],
+    maxlength: [30, 'Kullanıcı adı en fazla 30 karakter olabilir'],
+    match: [/^[a-z0-9_-]+$/, 'Kullanıcı adı sadece küçük harf, rakam, tire ve alt çizgi içerebilir']
   },
   password: {
     type: String,
@@ -70,7 +66,7 @@ userSchema.methods.toJSON = function() {
 };
 
 // Index tanımları - performans için
-userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 userSchema.index({ role: 1, status: 1 });
 
 module.exports = mongoose.model('User', userSchema);

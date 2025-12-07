@@ -38,7 +38,7 @@ connectDB();
 app.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'SMS Panel API is running',
+    message: 'Ring Panel API is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
@@ -48,7 +48,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     success: true,
-    message: 'SMS Panel API',
+    message: 'Ring Panel API',
     version: '1.0.0',
     endpoints: {
       admin: '/api/admin',
@@ -133,7 +133,7 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log('');
   console.log('╔════════════════════════════════════════════╗');
-  console.log('║       SMS PANEL BACKEND SERVER             ║');
+  console.log('║       RING PANEL BACKEND SERVER            ║');
   console.log('╠════════════════════════════════════════════╣');
   console.log(`║  🚀 Server running on port ${PORT}            ║`);
   console.log(`║  📁 Environment: ${(process.env.NODE_ENV || 'development').padEnd(18)}║`);

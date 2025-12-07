@@ -22,10 +22,7 @@ router.get('/', async (req, res) => {
     if (role) filter.role = role;
     if (status) filter.status = status;
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
+      filter.username = { $regex: search, $options: 'i' };
     }
 
     const [users, total] = await Promise.all([
@@ -92,22 +89,22 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, email, password, role = 'user', authorizedDevices = [], status = 'active' } = req.body;
+    const { username, password, role = 'user', authorizedDevices = [], status = 'active' } = req.body;
 
     // Validation
-    if (!name || !email || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Ad, email ve şifre zorunludur'
+        message: 'Kullanıcı adı ve şifre zorunludur'
       });
     }
 
-    // Email kontrolü
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    // Username kontrolü
+    const existingUser = await User.findOne({ username: username.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Bu email adresi zaten kullanılıyor'
+        message: 'Bu kullanıcı adı zaten kullanılıyor'
       });
     }
 
@@ -117,8 +114,7 @@ router.post('/', async (req, res) => {
 
     // Kullanıcı oluştur
     const user = new User({
-      name,
-      email: email.toLowerCase(),
+      username: username.toLowerCase(),
       password: hashedPassword,
       role,
       authorizedDevices,
@@ -160,7 +156,7 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    const { name, email, password, role, authorizedDevices, status } = req.body;
+    const { username, password, role, authorizedDevices, status } = req.body;
 
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -178,20 +174,19 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    // Email değişiyorsa duplicate kontrolü
-    if (email && email.toLowerCase() !== user.email) {
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
+    // Username değişiyorsa duplicate kontrolü
+    if (username && username.toLowerCase() !== user.username) {
+      const existingUser = await User.findOne({ username: username.toLowerCase() });
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Bu email adresi zaten kullanılıyor'
+          message: 'Bu kullanıcı adı zaten kullanılıyor'
         });
       }
-      user.email = email.toLowerCase();
+      user.username = username.toLowerCase();
     }
 
     // Alanları güncelle
-    if (name) user.name = name;
     if (role) user.role = role;
     if (status) user.status = status;
 

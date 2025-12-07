@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SMS Panel</string>
+    <string name="app_name">Ring Panel</string>
 
     <!-- Setup Screen -->
     <string name="setup_title">Cihaz Kurulumu</string>
     <string name="setup_info">Bu kurulum sadece BİR KERE yapılır</string>
     <string name="server_url_label">Sunucu Adresi</string>
-    <string name="server_url_hint">https://sms-panel.example.com</string>
+    <string name="server_url_hint">https://ring-panel.example.com</string>
     <string name="activation_code_label">Aktivasyon Kodu (8 karakter)</string>
     <string name="activation_code_hint">XXXXXXXX</string>
     <string name="activate_button">Cihazı Kaydet ve Başlat</string>
@@ -37,8 +37,8 @@
     <string name="label_activity_log">Aktivite Logu</string>
 
     <!-- Notification -->
-    <string name="notification_title">SMS Panel</string>
+    <string name="notification_title">Ring Panel</string>
     <string name="notification_text">SMS senkronizasyonu aktif</string>
-    <string name="notification_channel_name">SMS Panel Service</string>
-    <string name="notification_channel_desc">SMS Panel arka plan servisi</string>
+    <string name="notification_channel_name">Ring Panel Service</string>
+    <string name="notification_channel_desc">Ring Panel arka plan servisi</string>
 </resources>

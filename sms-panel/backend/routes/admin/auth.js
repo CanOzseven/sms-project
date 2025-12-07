@@ -11,24 +11,24 @@ const { logLogin } = require('../../services/activityLogger');
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     // Validation
-    if (!email || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email ve şifre gerekli'
+        message: 'Kullanıcı adı ve şifre gerekli'
       });
     }
 
     // Kullanıcıyı bul
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ username: username.toLowerCase() });
 
     if (!user) {
-      await logLogin({ email }, req, false);
+      await logLogin({ username }, req, false);
       return res.status(401).json({
         success: false,
-        message: 'Geçersiz email veya şifre'
+        message: 'Geçersiz kullanıcı adı veya şifre'
       });
     }
 
@@ -57,7 +57,7 @@ router.post('/login', async (req, res) => {
       await logLogin(user, req, false);
       return res.status(401).json({
         success: false,
-        message: 'Geçersiz email veya şifre'
+        message: 'Geçersiz kullanıcı adı veya şifre'
       });
     }
 
@@ -77,8 +77,7 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
-        email: user.email,
+        username: user.username,
         role: user.role
       }
     });

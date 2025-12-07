@@ -46,11 +46,11 @@ async function connectDB() {
  */
 async function createInitialAdmin() {
   try {
-    const adminEmail = 'admin@sms-panel.com';
+    const adminUsername = 'admin';
     const adminPassword = 'admin123';
 
     // Admin var mı kontrol et
-    const adminExists = await User.findOne({ email: adminEmail });
+    const adminExists = await User.findOne({ username: adminUsername });
 
     if (!adminExists) {
       // Şifreyi hashle
@@ -59,15 +59,14 @@ async function createInitialAdmin() {
 
       // Admin oluştur
       await User.create({
-        name: 'Admin',
-        email: adminEmail,
+        username: adminUsername,
         password: hashedPassword,
         role: 'admin',
         status: 'active'
       });
 
       console.log('✅ İlk admin oluşturuldu');
-      console.log('   📧 Email: admin@sms-panel.com');
+      console.log('   👤 Username: admin');
       console.log('   🔑 Password: admin123');
       console.log('   ⚠️  Lütfen production\'da şifreyi değiştirin!');
     }

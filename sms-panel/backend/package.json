@@ -1,7 +1,7 @@
 {
   "name": "sms-panel-backend",
   "version": "1.0.0",
-  "description": "SMS Panel Backend - Production Ready",
+  "description": "Ring Panel Backend - Production Ready",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
