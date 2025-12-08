@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   activationCode: {
     type: String,
     unique: true,
-    required: true
+    required: false
   },
   password: {
     type: String,
