@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const connectDB = require('./config/database');
 const { markOfflineDevices } = require('./routes/device/heartbeat');
+const { cleanupOldMessages, getCleanupStats } = require('./services/smsCleanup');
 
 const app = express();
 
@@ -159,6 +160,51 @@ setInterval(async () => {
     console.error('Offline devices check error:', error);
   }
 }, 2 * 60 * 1000);
+
+// Günlük SMS temizliği - Her gün saat 23:59'da çalış
+function scheduleDailyCleanup() {
+  const now = new Date();
+  const night = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23, 59, 0, 0 // 23:59:00
+  );
+
+  // Eğer bugünün 23:59'u geçtiyse, yarının 23:59'unu ayarla
+  if (now > night) {
+    night.setDate(night.getDate() + 1);
+  }
+
+  const msUntilMidnight = night.getTime() - now.getTime();
+
+  console.log(`📅 Günlük SMS temizliği planlandı: ${night.toLocaleString('tr-TR')}`);
+
+  setTimeout(async () => {
+    // İlk cleanup'ı çalıştır
+    await cleanupOldMessages(1); // 1 günden eski mesajları sil
+
+    // Her gün aynı saatte tekrarla (24 saat = 86400000 ms)
+    setInterval(async () => {
+      await cleanupOldMessages(1);
+    }, 24 * 60 * 60 * 1000);
+  }, msUntilMidnight);
+}
+
+// Cleanup'ı başlat
+scheduleDailyCleanup();
+
+// Startup'ta istatistikleri göster
+(async () => {
+  const stats = await getCleanupStats();
+  if (stats) {
+    console.log('📊 SMS İstatistikleri:');
+    console.log(`   Toplam: ${stats.total}`);
+    console.log(`   Bugün: ${stats.today}`);
+    console.log(`   Dün: ${stats.yesterday}`);
+    console.log(`   Daha eski: ${stats.older}`);
+  }
+})();
 
 // ==================== GRACEFUL SHUTDOWN ====================
 
