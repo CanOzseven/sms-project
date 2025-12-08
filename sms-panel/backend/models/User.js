@@ -4,24 +4,16 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: [true, 'Kullanıcı adı alanı zorunludur'],
-    unique: true, // Tek indeks burada
+    unique: true,
     lowercase: true,
     trim: true,
     minlength: [3, 'Kullanıcı adı en az 3 karakter olmalıdır'],
     maxlength: [30, 'Kullanıcı adı en fazla 30 karakter olabilir'],
     match: [/^[a-z0-9_-]+$/, 'Kullanıcı adı sadece küçük harf, rakam, tire ve alt çizgi içerebilir']
   },
-  email: {
-    type: String,
-    required: [true, 'Email alanı zorunludur'],
-    unique: true, // Tek indeks
-    lowercase: true,
-    trim: true,
-    match: [/.+@.+\..+/, 'Geçerli bir email olmalıdır']
-  },
   activationCode: {
     type: String,
-    unique: true, // Tek indeks
+    unique: true,
     required: true
   },
   password: {
