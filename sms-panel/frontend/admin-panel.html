@@ -74,7 +74,8 @@
     .btn-primary {
       background: var(--accent-primary);
       color: white;
-      width: 100%;
+      width: auto;
+      white-space: nowrap;
     }
 
     .btn-primary:hover {
@@ -114,14 +115,14 @@
       background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
       position: fixed;
-      left: -280px;
+      left: 0;
       top: 0;
       transition: left 0.3s;
       z-index: 1000;
     }
 
-    .sidebar.open {
-      left: 0;
+    .sidebar.closed {
+      left: -280px;
     }
 
     .sidebar-header {
@@ -162,6 +163,12 @@
     .main-content {
       flex: 1;
       min-height: 100vh;
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.3s;
+    }
+
+    .main-content.full-width {
+      margin-left: 0;
     }
 
     /* Top Bar */
@@ -290,32 +297,127 @@
     }
 
     .stat-card {
-      background: var(--bg-secondary);
-      padding: 24px;
-      border-radius: 12px;
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      padding: 28px;
+      border-radius: 16px;
       border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      border-color: var(--accent-primary);
     }
 
     .stat-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .stat-card-title {
       color: var(--text-secondary);
-      font-size: 14px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
     }
 
     .stat-card-icon {
-      font-size: 24px;
+      font-size: 32px;
+      opacity: 0.8;
     }
 
     .stat-card-value {
-      font-size: 32px;
+      font-size: 36px;
       font-weight: 700;
       color: var(--accent-primary);
+      line-height: 1;
+    }
+
+    /* Activity Log */
+    .activity-log {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+
+    .activity-log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .activity-log-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-log-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+
+    .activity-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .activity-icon {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .activity-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-text {
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-secondary);
     }
 
     /* Tables */
@@ -766,6 +868,13 @@
           <div class="notification-bell">
             <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
           </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding-right: 16px; border-right: 1px solid var(--border-color);">
+            <span style="font-size: 13px; color: var(--text-secondary);">🔄 Otomatik Yenileme</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="topbarAutoRefreshToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <div class="profile-dropdown">
             <div class="profile-btn" id="profileBtn">
               <div class="profile-avatar" id="profileAvatar">A</div>
@@ -817,8 +926,14 @@
               <div class="stat-card-value" id="statSMS">0</div>
             </div>
           </div>
-          <h3 style="margin-bottom: 16px;">Son Aktiviteler</h3>
-          <div class="activity-list" id="recentActivity">
+
+          <!-- Activity Log -->
+          <div class="activity-log">
+            <div class="activity-log-header">
+              <h3 class="activity-log-title">📋 Son Aktiviteler</h3>
+              <span style="font-size: 12px; color: var(--text-secondary);">Son 10 işlem</span>
+            </div>
+            <div class="activity-log-list" id="recentActivity">
             <div class="activity-item">
               <div class="activity-icon">📊</div>
               <div class="activity-content">
@@ -1156,14 +1271,35 @@
       document.getElementById('profileDropdown').classList.remove('show');
     });
 
-    // Auto-Refresh Toggle
+    // Auto-Refresh Toggle (Topbar)
     let pollingInterval = null;
     let currentPage = 'dashboard';
 
+    const topbarAutoRefreshToggle = document.getElementById('topbarAutoRefreshToggle');
+    topbarAutoRefreshToggle.checked = localStorage.getItem('adminAutoRefreshEnabled') !== 'false';
+    topbarAutoRefreshToggle.addEventListener('change', (e) => {
+      localStorage.setItem('adminAutoRefreshEnabled', e.target.checked);
+      // Sync with settings modal toggle
+      const settingsToggle = document.getElementById('autoRefreshToggle');
+      if (settingsToggle) settingsToggle.checked = e.target.checked;
+
+      if (e.target.checked) {
+        startPolling();
+        showToast('Otomatik yenileme açıldı');
+      } else {
+        stopPolling();
+        showToast('Otomatik yenileme kapatıldı');
+      }
+    });
+
+    // Auto-Refresh Toggle (Settings Modal - for backward compatibility)
     const autoRefreshToggle = document.getElementById('autoRefreshToggle');
     autoRefreshToggle.checked = localStorage.getItem('adminAutoRefreshEnabled') !== 'false';
     autoRefreshToggle.addEventListener('change', (e) => {
       localStorage.setItem('adminAutoRefreshEnabled', e.target.checked);
+      // Sync with topbar toggle
+      topbarAutoRefreshToggle.checked = e.target.checked;
+
       if (e.target.checked) {
         startPolling();
         showToast('Otomatik yenileme açıldı');
@@ -1197,17 +1333,20 @@
       }
     }
 
-    // Sidebar Toggle
+    // Sidebar Toggle (default open)
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const mainContent = document.getElementById('mainContent');
 
     document.getElementById('hamburgerBtn').addEventListener('click', () => {
-      sidebar.classList.toggle('open');
+      sidebar.classList.toggle('closed');
+      mainContent.classList.toggle('full-width');
       sidebarOverlay.classList.toggle('show');
     });
 
     sidebarOverlay.addEventListener('click', () => {
-      sidebar.classList.remove('open');
+      sidebar.classList.add('closed');
+      mainContent.classList.add('full-width');
       sidebarOverlay.classList.remove('show');
     });
 

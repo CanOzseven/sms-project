@@ -108,13 +108,131 @@
     /* Main App */
     .app-container {
       display: flex;
+      flex-direction: column;
       height: 100vh;
+    }
+
+    /* Top Navbar */
+    .top-navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      height: 60px;
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .navbar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .navbar-toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border-color);
+    }
+
+    .navbar-toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .navbar-toggle-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .navbar-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 20px;
+      transition: background 0.2s;
+      position: relative;
+    }
+
+    .navbar-profile:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .navbar-username {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .navbar-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      min-width: 200px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .navbar-dropdown.show {
+      display: block;
+    }
+
+    .navbar-dropdown-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 14px;
+    }
+
+    .navbar-dropdown-item:first-child {
+      border-radius: 12px 12px 0 0;
+    }
+
+    .navbar-dropdown-item:last-child {
+      border-radius: 0 0 12px 12px;
+    }
+
+    .navbar-dropdown-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .navbar-dropdown-item.danger {
+      color: var(--danger);
+    }
+
+    /* Main Content Wrapper */
+    .main-content-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
     }
 
     /* Sidebar */
     .sidebar {
       width: var(--sidebar-width);
-      height: 100vh;
+      height: 100%;
       background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
       display: flex;
@@ -697,8 +815,43 @@
 <body>
   <!-- Main App -->
   <div class="app-container" id="appContainer">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+      <div class="navbar-left">
+        <div class="navbar-logo">Ring Panel</div>
+      </div>
+      <div class="navbar-right">
+        <div class="navbar-toggle-group">
+          <div class="navbar-toggle-item">
+            <span class="navbar-toggle-label">🔔 Bildirim Sesi</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="navbarNotificationToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="navbar-toggle-item">
+            <span class="navbar-toggle-label">🔄 Otomatik Yenileme</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="navbarAutoRefreshToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="navbar-profile" id="navbarProfile">
+          <span class="navbar-username" id="navbarUsername">Kullanıcı</span>
+          <span>👤</span>
+          <div class="navbar-dropdown" id="navbarDropdown">
+            <div class="navbar-dropdown-item" id="navbarAccountSettings">⚙️ Hesap Ayarları</div>
+            <div class="navbar-dropdown-item danger" id="navbarLogout">🚪 Çıkış Yap</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-content-wrapper">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="header-top">
           <span class="app-title">Ring Panel</span>
@@ -757,7 +910,8 @@
         </div>
       </div>
     </main>
-  </div>
+    </div> <!-- End Main Content Wrapper -->
+  </div> <!-- End App Container -->
 
   <!-- Notification Container -->
   <div id="notificationContainer"></div>
@@ -967,6 +1121,7 @@
         const data = await api('/user/me');
         currentUser = data.user;
         document.getElementById('profileUsername').textContent = currentUser.username;
+        document.getElementById('navbarUsername').textContent = currentUser.username;
         loadDevices();
         startPolling();
         return true;
@@ -1277,19 +1432,67 @@
       document.getElementById('profileDropdown').classList.remove('show');
     });
 
-    // Notification Sound Toggle
-    const soundToggle = document.getElementById('notificationSoundToggle');
-    soundToggle.checked = localStorage.getItem('notificationSoundEnabled') !== 'false';
-    soundToggle.addEventListener('change', (e) => {
+    // Navbar Profile Dropdown
+    document.getElementById('navbarProfile').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('navbarDropdown').classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => {
+      document.getElementById('navbarDropdown').classList.remove('show');
+    });
+
+    // Navbar Account Settings
+    document.getElementById('navbarAccountSettings').addEventListener('click', () => {
+      document.getElementById('accountModal').style.display = 'flex';
+      document.getElementById('navbarDropdown').classList.remove('show');
+    });
+
+    // Navbar Logout
+    document.getElementById('navbarLogout').addEventListener('click', () => {
+      localStorage.removeItem('userToken');
+      token = null;
+      currentUser = null;
+      stopPolling();
+      window.location.href = 'login.html';
+    });
+
+    // Navbar Notification Sound Toggle
+    const navbarSoundToggle = document.getElementById('navbarNotificationToggle');
+    navbarSoundToggle.checked = localStorage.getItem('notificationSoundEnabled') !== 'false';
+    navbarSoundToggle.addEventListener('change', (e) => {
       localStorage.setItem('notificationSoundEnabled', e.target.checked);
       showToast(e.target.checked ? 'Bildirim sesi açıldı' : 'Bildirim sesi kapatıldı');
     });
 
-    // Auto-Refresh Toggle
+    // Navbar Auto-Refresh Toggle
+    const navbarAutoRefreshToggle = document.getElementById('navbarAutoRefreshToggle');
+    navbarAutoRefreshToggle.checked = localStorage.getItem('autoRefreshEnabled') !== 'false';
+    navbarAutoRefreshToggle.addEventListener('change', (e) => {
+      localStorage.setItem('autoRefreshEnabled', e.target.checked);
+      if (e.target.checked) {
+        startPolling();
+        showToast('Otomatik yenileme açıldı');
+      } else {
+        stopPolling();
+        showToast('Otomatik yenileme kapatıldı');
+      }
+    });
+
+    // Settings Modal Toggles (keep for backward compatibility)
+    const soundToggle = document.getElementById('notificationSoundToggle');
+    soundToggle.checked = localStorage.getItem('notificationSoundEnabled') !== 'false';
+    soundToggle.addEventListener('change', (e) => {
+      localStorage.setItem('notificationSoundEnabled', e.target.checked);
+      navbarSoundToggle.checked = e.target.checked;
+      showToast(e.target.checked ? 'Bildirim sesi açıldı' : 'Bildirim sesi kapatıldı');
+    });
+
     const autoRefreshToggle = document.getElementById('autoRefreshToggle');
     autoRefreshToggle.checked = localStorage.getItem('autoRefreshEnabled') !== 'false';
     autoRefreshToggle.addEventListener('change', (e) => {
       localStorage.setItem('autoRefreshEnabled', e.target.checked);
+      navbarAutoRefreshToggle.checked = e.target.checked;
       if (e.target.checked) {
         startPolling();
         showToast('Otomatik yenileme açıldı');
