@@ -1,16 +1,28 @@
 const mongoose = require('mongoose');
 
-// Kullanıcı şeması - Admin ve normal kullanıcılar için
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: [true, 'Kullanıcı adı alanı zorunludur'],
-    unique: true,
+    unique: true, // Tek indeks burada
     lowercase: true,
     trim: true,
     minlength: [3, 'Kullanıcı adı en az 3 karakter olmalıdır'],
     maxlength: [30, 'Kullanıcı adı en fazla 30 karakter olabilir'],
     match: [/^[a-z0-9_-]+$/, 'Kullanıcı adı sadece küçük harf, rakam, tire ve alt çizgi içerebilir']
+  },
+  email: {
+    type: String,
+    required: [true, 'Email alanı zorunludur'],
+    unique: true, // Tek indeks
+    lowercase: true,
+    trim: true,
+    match: [/.+@.+\..+/, 'Geçerli bir email olmalıdır']
+  },
+  activationCode: {
+    type: String,
+    unique: true, // Tek indeks
+    required: true
   },
   password: {
     type: String,
@@ -19,30 +31,22 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: {
-      values: ['admin', 'user'],
-      message: 'Rol admin veya user olmalıdır'
-    },
+    enum: ['admin', 'user'],
     default: 'user'
   },
-  // Kullanıcının erişim yetkisi olan cihazlar
   authorizedDevices: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Device'
   }],
   status: {
     type: String,
-    enum: {
-      values: ['active', 'inactive'],
-      message: 'Durum active veya inactive olmalıdır'
-    },
+    enum: ['active', 'inactive'],
     default: 'active'
   },
   lastLogin: {
     type: Date,
     default: null
   },
-  // Aktif session token - single session management için
   currentSessionToken: {
     type: String,
     default: null
@@ -70,7 +74,7 @@ userSchema.methods.toJSON = function() {
   return user;
 };
 
-// Index tanımları - performans için
+// Ek performans indeksi
 userSchema.index({ role: 1, status: 1 });
 
 module.exports = mongoose.model('User', userSchema);
