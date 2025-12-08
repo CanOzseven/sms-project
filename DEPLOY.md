@@ -81,7 +81,7 @@ sudo nano /etc/nginx/sites-available/ring-panel
 ```nginx
 server {
     listen 80;
-    server_name 195.179.229.121;
+    server_name 158.220.101.218;
 
     # Frontend
     location / {
@@ -155,10 +155,10 @@ node scripts/create-test-users.js
 
 ## 🌐 Erişim URL'leri
 
-- **Login:** `http://195.179.229.121/login.html`
-- **Admin Panel:** `http://195.179.229.121/admin-panel.html` (auto-redirect)
-- **User Panel:** `http://195.179.229.121/user-panel.html` (auto-redirect)
-- **API Health:** `http://195.179.229.121:3000/health`
+- **Login:** `http://158.220.101.218/login.html`
+- **Admin Panel:** `http://158.220.101.218/admin-panel.html` (auto-redirect)
+- **User Panel:** `http://158.220.101.218/user-panel.html` (auto-redirect)
+- **API Health:** `http://158.220.101.218:3000/health`
 
 ---
 
