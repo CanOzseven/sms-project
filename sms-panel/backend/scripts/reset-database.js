@@ -32,8 +32,8 @@ async function resetDatabase() {
     }
 
     // Tüm collection'ları temizle
-    console.log('\n🗑️  Collection'lar temizleniyor...');
-
+    console.log(`\n🗑️  Collection'lar temizleniyor...`);
+    
     const usersDeleted = await User.deleteMany({});
     console.log(`   ✅ ${usersDeleted.deletedCount} kullanıcı silindi`);
 
