@@ -188,26 +188,36 @@ class SMSBackgroundService : Service() {
             // Son sync zamanını al
             val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
 
+            val lastSyncDate = if (lastSyncTime > 0) {
+                val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                dateFormat.format(Date(lastSyncTime))
+            } else "İlk senkronizasyon"
+
             ActivityLogger.info(
                 this,
                 "BackgroundService",
-                "SMS sync başlatıldı",
-                "Last sync: $lastSyncTime"
+                "Periyodik SMS taraması başladı (15dk)",
+                "Son tarama: $lastSyncDate"
             )
 
             // SMS'leri oku
             val messages = readSMSMessages(lastSyncTime)
 
             if (messages.isEmpty()) {
-                ActivityLogger.info(this, "BackgroundService", "Sync: Yeni SMS yok", null)
+                ActivityLogger.info(
+                    this,
+                    "BackgroundService",
+                    "Tarama tamamlandı: Yeni SMS yok ✓",
+                    "Bir sonraki tarama 15 dakika sonra"
+                )
                 return
             }
 
             ActivityLogger.info(
                 this,
                 "BackgroundService",
-                "${messages.size} SMS senkronize edilecek",
-                null
+                "📤 ${messages.size} yeni SMS bulundu",
+                "Sunucuya gönderiliyor..."
             )
 
             val url = "$serverUrl/api/device/sms"
@@ -242,11 +252,17 @@ class SMSBackgroundService : Service() {
                             .putLong("lastSyncTimestamp", System.currentTimeMillis())
                             .apply()
 
+                        val resultMsg = if (duplicates > 0) {
+                            "✓ $synced yeni SMS kaydedildi, $duplicates zaten vardı"
+                        } else {
+                            "✓ $synced SMS başarıyla kaydedildi"
+                        }
+
                         ActivityLogger.success(
                             this,
                             "BackgroundService",
-                            "Sync tamamlandı ✓",
-                            "$synced yeni SMS, $duplicates duplicate"
+                            "Senkronizasyon tamamlandı",
+                            resultMsg
                         )
                     }
                     response.code == 401 || response.code == 404 -> {
