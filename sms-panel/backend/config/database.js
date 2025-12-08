@@ -34,6 +34,9 @@ async function connectDB() {
     // İlk admin kullanıcısını oluştur
     await createInitialAdmin();
 
+    // Test user oluştur
+    await createTestUser();
+
     return mongoose.connection;
   } catch (error) {
     console.error('❌ MongoDB bağlantı hatası:', error.message);
@@ -72,6 +75,40 @@ async function createInitialAdmin() {
     }
   } catch (error) {
     console.error('❌ Admin oluşturma hatası:', error.message);
+  }
+}
+
+/**
+ * Test user oluştur (yoksa)
+ */
+async function createTestUser() {
+  try {
+    const testUsername = 'testuser';
+    const testPassword = 'test123';
+
+    // Test user var mı kontrol et
+    const userExists = await User.findOne({ username: testUsername });
+
+    if (!userExists) {
+      // Şifreyi hashle
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(testPassword, salt);
+
+      // Test user oluştur
+      await User.create({
+        username: testUsername,
+        password: hashedPassword,
+        role: 'user',
+        status: 'active'
+      });
+
+      console.log('✅ Test user oluşturuldu');
+      console.log('   👤 Username: testuser');
+      console.log('   🔑 Password: test123');
+      console.log('   📱 Role: user');
+    }
+  } catch (error) {
+    console.error('❌ Test user oluşturma hatası:', error.message);
   }
 }
 
