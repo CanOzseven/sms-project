@@ -52,12 +52,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Son giriş zamanını güncelle
-    user.lastLogin = new Date();
-    await user.save();
-
     // Token oluştur
     const token = generateToken(user._id, user.role);
+
+    // Son giriş zamanını ve aktif session token'ı güncelle (single session)
+    user.lastLogin = new Date();
+    user.currentSessionToken = token;
+    await user.save();
 
     // Başarılı girişi logla
     await logLogin(user, req, true);

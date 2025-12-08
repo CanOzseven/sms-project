@@ -41,6 +41,15 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
+    // Single session kontrolü - başka bir yerden giriş yapılmış mı?
+    if (user.currentSessionToken && user.currentSessionToken !== token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Oturum sonlandırıldı. Başka bir cihazdan giriş yapılmış.',
+        sessionExpired: true
+      });
+    }
+
     // Kullanıcıyı request'e ekle
     req.user = user;
     next();

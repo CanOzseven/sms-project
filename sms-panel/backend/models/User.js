@@ -42,6 +42,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Aktif session token - single session management için
+  currentSessionToken: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
