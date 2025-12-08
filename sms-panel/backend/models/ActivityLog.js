@@ -120,7 +120,7 @@ activityLogSchema.statics.getRecentActivity = async function(limit = 100) {
   return this.find()
     .sort({ timestamp: -1 })
     .limit(limit)
-    .populate('userId', 'name email')
+    .populate('userId', 'username role')
     .populate('deviceId', 'name')
     .lean();
 };
