@@ -1386,7 +1386,6 @@
       }
     }
 
-    // Settings Modal Handlers
     // Navbar Profile Dropdown
     document.getElementById('navbarProfile').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1399,7 +1398,8 @@
 
     // Navbar Account Settings
     document.getElementById('navbarAccountSettings').addEventListener('click', () => {
-      document.getElementById('accountModal').style.display = 'flex';
+      const modal = document.getElementById('accountModal');
+      modal.style.display = 'flex';
       document.getElementById('navbarDropdown').classList.remove('show');
     });
 
@@ -1436,25 +1436,38 @@
 
     // Settings Modal Toggles (keep for backward compatibility)
     const soundToggle = document.getElementById('notificationSoundToggle');
-    soundToggle.checked = localStorage.getItem('notificationSoundEnabled') !== 'false';
-    soundToggle.addEventListener('change', (e) => {
-      localStorage.setItem('notificationSoundEnabled', e.target.checked);
-      navbarSoundToggle.checked = e.target.checked;
-      showToast(e.target.checked ? 'Bildirim sesi açıldı' : 'Bildirim sesi kapatıldı');
-    });
+    if (soundToggle) {
+      soundToggle.checked = localStorage.getItem('notificationSoundEnabled') !== 'false';
+      soundToggle.addEventListener('change', (e) => {
+        localStorage.setItem('notificationSoundEnabled', e.target.checked);
+        navbarSoundToggle.checked = e.target.checked;
+        showToast(e.target.checked ? 'Bildirim sesi açıldı' : 'Bildirim sesi kapatıldı');
+      });
+    }
 
     const autoRefreshToggle = document.getElementById('autoRefreshToggle');
-    autoRefreshToggle.checked = localStorage.getItem('autoRefreshEnabled') !== 'false';
-    autoRefreshToggle.addEventListener('change', (e) => {
-      localStorage.setItem('autoRefreshEnabled', e.target.checked);
-      navbarAutoRefreshToggle.checked = e.target.checked;
-      if (e.target.checked) {
-        startPolling();
-        showToast('Otomatik yenileme açıldı');
-      } else {
-        stopPolling();
-        showToast('Otomatik yenileme kapatıldı');
-      }
+    if (autoRefreshToggle) {
+      autoRefreshToggle.checked = localStorage.getItem('autoRefreshEnabled') !== 'false';
+      autoRefreshToggle.addEventListener('change', (e) => {
+        localStorage.setItem('autoRefreshEnabled', e.target.checked);
+        navbarAutoRefreshToggle.checked = e.target.checked;
+        if (e.target.checked) {
+          startPolling();
+          showToast('Otomatik yenileme açıldı');
+        } else {
+          stopPolling();
+          showToast('Otomatik yenileme kapatıldı');
+        }
+      });
+    }
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.style.display = 'none';
+        }
+      });
     });
 
     // Change Password
