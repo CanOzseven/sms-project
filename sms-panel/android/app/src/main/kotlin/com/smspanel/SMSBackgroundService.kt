@@ -139,15 +139,31 @@ class SMSBackgroundService : Service() {
 
         try {
             client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    ActivityLogger.info(this, "BackgroundService", "Heartbeat gönderildi ✓", null)
-                } else {
-                    ActivityLogger.warning(
-                        this,
-                        "BackgroundService",
-                        "Heartbeat başarısız",
-                        "HTTP ${response.code}"
-                    )
+                when {
+                    response.isSuccessful -> {
+                        ActivityLogger.info(this, "BackgroundService", "Heartbeat gönderildi ✓", null)
+                    }
+                    response.code == 401 || response.code == 404 -> {
+                        // Cihaz backend'de yok veya silinmiş
+                        ActivityLogger.error(
+                            this,
+                            "BackgroundService",
+                            "Cihaz bulunamadı veya silinmiş!",
+                            "HTTP ${response.code} - Ayarlar temizleniyor..."
+                        )
+                        MainActivity.clearDeviceAndRestart(
+                            this,
+                            "Heartbeat hatası: HTTP ${response.code} - Cihaz backend'de bulunamadı"
+                        )
+                    }
+                    else -> {
+                        ActivityLogger.warning(
+                            this,
+                            "BackgroundService",
+                            "Heartbeat başarısız",
+                            "HTTP ${response.code}"
+                        )
+                    }
                 }
             }
         } catch (e: java.net.UnknownHostException) {
@@ -212,32 +228,48 @@ class SMSBackgroundService : Service() {
             client.newCall(request).execute().use { response ->
                 val body = response.body?.string()
 
-                if (response.isSuccessful) {
-                    val result = gson.fromJson(body, Map::class.java)
-                    val synced = (result["synced"] as? Double)?.toInt() ?: 0
-                    val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
+                when {
+                    response.isSuccessful -> {
+                        val result = gson.fromJson(body, Map::class.java)
+                        val synced = (result["synced"] as? Double)?.toInt() ?: 0
+                        val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
 
-                    // İstatistikleri güncelle
-                    val totalSynced = prefs.getInt("syncedSms", 0) + synced
-                    prefs.edit()
-                        .putInt("syncedSms", totalSynced)
-                        .putLong("lastSync", System.currentTimeMillis())
-                        .putLong("lastSyncTimestamp", System.currentTimeMillis())
-                        .apply()
+                        // İstatistikleri güncelle
+                        val totalSynced = prefs.getInt("syncedSms", 0) + synced
+                        prefs.edit()
+                            .putInt("syncedSms", totalSynced)
+                            .putLong("lastSync", System.currentTimeMillis())
+                            .putLong("lastSyncTimestamp", System.currentTimeMillis())
+                            .apply()
 
-                    ActivityLogger.success(
-                        this,
-                        "BackgroundService",
-                        "Sync tamamlandı ✓",
-                        "$synced yeni SMS, $duplicates duplicate"
-                    )
-                } else {
-                    ActivityLogger.error(
-                        this,
-                        "BackgroundService",
-                        "Sync başarısız",
-                        "HTTP ${response.code}: ${body?.take(200)}"
-                    )
+                        ActivityLogger.success(
+                            this,
+                            "BackgroundService",
+                            "Sync tamamlandı ✓",
+                            "$synced yeni SMS, $duplicates duplicate"
+                        )
+                    }
+                    response.code == 401 || response.code == 404 -> {
+                        // Cihaz backend'de yok veya silinmiş
+                        ActivityLogger.error(
+                            this,
+                            "BackgroundService",
+                            "Cihaz bulunamadı veya silinmiş!",
+                            "HTTP ${response.code} - Ayarlar temizleniyor..."
+                        )
+                        MainActivity.clearDeviceAndRestart(
+                            this,
+                            "SMS Sync hatası: HTTP ${response.code} - Cihaz backend'de bulunamadı"
+                        )
+                    }
+                    else -> {
+                        ActivityLogger.error(
+                            this,
+                            "BackgroundService",
+                            "Sync başarısız",
+                            "HTTP ${response.code}: ${body?.take(200)}"
+                        )
+                    }
                 }
             }
 

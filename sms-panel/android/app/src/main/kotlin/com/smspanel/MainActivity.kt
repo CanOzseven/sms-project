@@ -59,6 +59,42 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.POST_NOTIFICATIONS
         )
+
+        /**
+         * Cihaz ayarlarını tamamen temizle ve setup ekranına dön
+         * Backend'de cihaz silindiğinde veya bulunamadığında kullanılır
+         */
+        fun clearDeviceAndRestart(context: Context, reason: String = "Cihaz backend'de bulunamadı") {
+            try {
+                ActivityLogger.error(
+                    context,
+                    "System",
+                    "HARD CLEAR: Cihaz ayarları temizleniyor",
+                    reason
+                )
+
+                val prefs = context.getSharedPreferences("SMSPanel", Context.MODE_PRIVATE)
+                prefs.edit().clear().apply()
+
+                // Background service'i durdur
+                val intent = Intent(context, SMSBackgroundService::class.java)
+                context.stopService(intent)
+
+                // MainActivity'yi yeniden başlat
+                val restartIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                context.startActivity(restartIntent)
+
+                // Mevcut activity'yi kapat
+                if (context is Activity) {
+                    context.finish()
+                }
+
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Clear device error: ${e.message}")
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

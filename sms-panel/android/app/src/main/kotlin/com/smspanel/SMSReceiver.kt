@@ -216,20 +216,36 @@ class SMSReceiver : BroadcastReceiver() {
                 client.newCall(request).execute().use { response ->
                     val responseBody = response.body?.string()
 
-                    if (response.isSuccessful) {
-                        ActivityLogger.success(
-                            context,
-                            "SMSReceiver",
-                            "SMS sunucuya gönderildi ✓",
-                            "Phone: $phoneNumber, Code: ${response.code}"
-                        )
-                    } else {
-                        ActivityLogger.error(
-                            context,
-                            "SMSReceiver",
-                            "SMS gönderme başarısız",
-                            "HTTP ${response.code}: ${responseBody?.take(200)}"
-                        )
+                    when {
+                        response.isSuccessful -> {
+                            ActivityLogger.success(
+                                context,
+                                "SMSReceiver",
+                                "SMS sunucuya gönderildi ✓",
+                                "Phone: $phoneNumber, Code: ${response.code}"
+                            )
+                        }
+                        response.code == 401 || response.code == 404 -> {
+                            // Cihaz backend'de yok veya silinmiş
+                            ActivityLogger.error(
+                                context,
+                                "SMSReceiver",
+                                "Cihaz bulunamadı veya silinmiş!",
+                                "HTTP ${response.code} - Ayarlar temizleniyor..."
+                            )
+                            MainActivity.clearDeviceAndRestart(
+                                context,
+                                "SMS gönderme hatası: HTTP ${response.code} - Cihaz backend'de bulunamadı"
+                            )
+                        }
+                        else -> {
+                            ActivityLogger.error(
+                                context,
+                                "SMSReceiver",
+                                "SMS gönderme başarısız",
+                                "HTTP ${response.code}: ${responseBody?.take(200)}"
+                            )
+                        }
                     }
                 }
 
