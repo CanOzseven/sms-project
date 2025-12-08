@@ -52,6 +52,8 @@ async function createInitialAdmin() {
   try {
     const adminUsername = 'admin';
     const adminPassword = 'admin123';
+    const adminEmail = 'admin@example.com'; // Email ekledik
+    const activationCode = Math.random().toString(36).substring(2, 12); // Rastgele 10 karakter
 
     // Admin var mı kontrol et
     const adminExists = await User.findOne({ username: adminUsername });
@@ -64,20 +66,23 @@ async function createInitialAdmin() {
       // Admin oluştur
       await User.create({
         username: adminUsername,
+        email: adminEmail,
         password: hashedPassword,
         role: 'admin',
-        status: 'active'
+        status: 'active',
+        activationCode: activationCode
       });
 
       console.log('✅ İlk admin oluşturuldu');
-      console.log('   👤 Username: admin');
-      console.log('   🔑 Password: admin123');
+      console.log('   👤 Username:', adminUsername);
+      console.log('   🔑 Password:', adminPassword);
       console.log('   ⚠️  Lütfen production\'da şifreyi değiştirin!');
     }
   } catch (error) {
     console.error('❌ Admin oluşturma hatası:', error.message);
   }
 }
+
 
 /**
  * Test user oluştur (yoksa)
