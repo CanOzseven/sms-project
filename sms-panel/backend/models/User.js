@@ -71,7 +71,6 @@ userSchema.methods.toJSON = function() {
 };
 
 // Index tanımları - performans için
-userSchema.index({ username: 1 });
 userSchema.index({ role: 1, status: 1 });
 
 module.exports = mongoose.model('User', userSchema);
