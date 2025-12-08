@@ -786,7 +786,7 @@
     }
 
     input:checked + .toggle-slider {
-      background-color: var(--accent-primary);
+      background-color: #00d4aa;
     }
 
     input:checked + .toggle-slider:before {
@@ -853,23 +853,6 @@
       <!-- Sidebar -->
       <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="header-top">
-          <span class="app-title">Ring Panel</span>
-          <div class="header-actions">
-            <button class="icon-btn" id="settingsBtn" title="Ayarlar">⚙️</button>
-            <div class="profile-dropdown">
-              <button class="icon-btn" id="profileBtn" title="Profil">👤</button>
-              <div class="dropdown-menu" id="profileDropdown">
-                <div class="dropdown-item" id="profileInfo" style="border-bottom: 1px solid var(--border-color);">
-                  <div id="profileUsername" style="font-weight: 600;"></div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Kullanici</div>
-                </div>
-                <div class="dropdown-item" id="accountSettingsBtn">Hesap Ayarlari</div>
-                <div class="dropdown-item" id="logoutBtn">Cikis Yap</div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input type="text" id="searchInput" placeholder="Mesajlarda ara...">
@@ -903,8 +886,7 @@
             <div class="chat-header-name" id="chatName">-</div>
             <div class="chat-header-status" id="chatStatus">-</div>
           </div>
-          <button class="icon-btn" id="markReadBtn" title="Tumu okundu">✓</button>
-          <button class="icon-btn" id="deleteConversationBtn" title="Konusmayi sil" style="color: var(--error-color);">🗑️</button>
+          <button class="icon-btn" id="deleteConversationBtn" title="Konusmayi sil" style="color: var(--danger);">🗑️</button>
         </div>
         <div class="chat-messages" id="chatMessages">
         </div>
@@ -953,7 +935,7 @@
 
   <!-- Account Settings Modal -->
   <div class="modal-overlay" id="accountModal" style="display: none;">
-    <div class="modal" style="max-width: 400px; background: var(--bg-secondary); border-radius: 16px; padding: 20px;">
+    <div class="modal" style="max-width: 550px; width: 90%; background: var(--bg-secondary); border-radius: 16px; padding: 32px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="font-size: 18px; font-weight: 600;">Hesap Ayarları</h3>
         <span style="cursor: pointer; font-size: 24px; color: var(--text-secondary);" onclick="document.getElementById('accountModal').style.display='none'">&times;</span>
@@ -1120,7 +1102,6 @@
       try {
         const data = await api('/user/me');
         currentUser = data.user;
-        document.getElementById('profileUsername').textContent = currentUser.username;
         document.getElementById('navbarUsername').textContent = currentUser.username;
         loadDevices();
         startPolling();
@@ -1133,24 +1114,7 @@
       }
     }
 
-    // Logout
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('userToken');
-      token = null;
-      currentUser = null;
-      stopPolling();
-      window.location.href = 'login.html';
-    });
-
-    // Profile Dropdown
-    document.getElementById('profileBtn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.getElementById('profileDropdown').classList.toggle('show');
-    });
-
-    document.addEventListener('click', () => {
-      document.getElementById('profileDropdown').classList.remove('show');
-    });
+    // Removed old sidebar logout/profile handlers (now in navbar)
 
     // Load Devices
     async function loadDevices() {
@@ -1423,15 +1387,6 @@
     }
 
     // Settings Modal Handlers
-    document.getElementById('settingsBtn')?.addEventListener('click', () => {
-      document.getElementById('settingsModal').style.display = 'flex';
-    });
-
-    document.getElementById('accountSettingsBtn')?.addEventListener('click', () => {
-      document.getElementById('accountModal').style.display = 'flex';
-      document.getElementById('profileDropdown').classList.remove('show');
-    });
-
     // Navbar Profile Dropdown
     document.getElementById('navbarProfile').addEventListener('click', (e) => {
       e.stopPropagation();
