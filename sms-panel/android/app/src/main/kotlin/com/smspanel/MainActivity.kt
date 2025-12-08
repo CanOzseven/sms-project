@@ -45,9 +45,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var totalSmsText: TextView
     private lateinit var syncedSmsText: TextView
     private lateinit var activityLog: LinearLayout
+    private lateinit var clearLogsButton: Button
 
     private var startTime: Long = 0
     private var uptimeRunnable: Runnable? = null
+    private var logUpdateRunnable: Runnable? = null
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
@@ -150,9 +152,11 @@ class MainActivity : AppCompatActivity() {
 
         startTime = System.currentTimeMillis()
         startUptimeCounter()
+        startLogUpdater()
 
         updateStats()
-        addLogEntry("✓ Uygulama baslatildi")
+        ActivityLogger.success(this, "MainActivity", "Uygulama başlatıldı", null)
+        refreshActivityLogs()
     }
 
     private fun activateDevice() {
@@ -252,7 +256,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(intent)
         }
-        addLogEntry("✓ Arka plan servisi baslatildi")
+        ActivityLogger.success(this, "MainActivity", "Arka plan servisi başlatıldı", null)
     }
 
     private fun startUptimeCounter() {
@@ -284,23 +288,84 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Activity log'ları her 3 saniyede bir güncelle
+     */
+    private fun startLogUpdater() {
+        logUpdateRunnable = object : Runnable {
+            override fun run() {
+                refreshActivityLogs()
+                handler.postDelayed(this, 3000) // Her 3 saniye
+            }
+        }
+        handler.post(logUpdateRunnable!!)
+    }
+
+    /**
+     * Merkezi log sisteminden logları çek ve göster
+     */
+    private fun refreshActivityLogs() {
+        try {
+            val logs = ActivityLogger.getAllLogs(this)
+            activityLog.removeAllViews()
+
+            if (logs.isEmpty()) {
+                val textView = TextView(this).apply {
+                    text = "Henüz log kaydı yok"
+                    setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                    textSize = 12f
+                    setPadding(8, 8, 8, 8)
+                }
+                activityLog.addView(textView)
+                return
+            }
+
+            // Son 30 logu göster
+            logs.take(30).forEach { log ->
+                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                val time = try {
+                    val fullFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                    val date = fullFormat.parse(log.timestamp)
+                    timeFormat.format(date ?: Date())
+                } catch (e: Exception) {
+                    "??:??:??"
+                }
+
+                // Level'e göre renk ve emoji
+                val (emoji, color) = when (log.level) {
+                    "SUCCESS" -> "✓" to android.R.color.holo_green_light
+                    "ERROR" -> "✗" to android.R.color.holo_red_light
+                    "WARNING" -> "⚠" to android.R.color.holo_orange_light
+                    else -> "•" to android.R.color.white
+                }
+
+                val textView = TextView(this).apply {
+                    val displayText = buildString {
+                        append("[$time] $emoji ")
+                        append("[${log.component}] ")
+                        append(log.message)
+                        if (!log.details.isNullOrBlank()) {
+                            append("\n    → ${log.details}")
+                        }
+                    }
+                    text = displayText
+                    setTextColor(ContextCompat.getColor(context, color))
+                    textSize = 11f
+                    setPadding(4, 4, 4, 4)
+                    setTypeface(null, android.graphics.Typeface.NORMAL)
+                }
+
+                activityLog.addView(textView)
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Log refresh hatası: ${e.message}")
+        }
+    }
+
+    @Deprecated("Eski log sistemi, artık ActivityLogger kullanılıyor")
     private fun addLogEntry(message: String) {
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val time = timeFormat.format(Date())
-
-        val textView = TextView(this).apply {
-            text = "[$time] $message"
-            setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            textSize = 12f
-            setPadding(0, 4, 0, 4)
-        }
-
-        activityLog.addView(textView, 0)
-
-        // Maksimum 20 log tut
-        while (activityLog.childCount > 20) {
-            activityLog.removeViewAt(activityLog.childCount - 1)
-        }
+        ActivityLogger.info(this, "MainActivity", message, null)
     }
 
     override fun onResume() {
@@ -313,5 +378,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         uptimeRunnable?.let { handler.removeCallbacks(it) }
+        logUpdateRunnable?.let { handler.removeCallbacks(it) }
     }
 }

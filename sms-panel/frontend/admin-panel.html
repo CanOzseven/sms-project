@@ -1386,17 +1386,42 @@
       try {
         const data = await api('/admin/permissions');
         const tbody = document.getElementById('permissionsTableBody');
-        tbody.innerHTML = data.permissions.map(perm => `
-          <tr>
-            <td>${perm.userId?.name || '-'} (${perm.userId?.email || ''})</td>
-            <td>${perm.deviceId?.name || '-'}</td>
-            <td>${formatDate(perm.grantedAt)}</td>
-            <td>${perm.grantedBy?.name || 'Sistem'}</td>
-            <td class="action-btns">
-              <button class="btn btn-danger btn-sm" onclick="revokePermission('${perm.userId?._id}', '${perm.deviceId?._id}')">Yetkiyi Kaldir</button>
-            </td>
-          </tr>
-        `).join('') || '<tr><td colspan="5" style="text-align: center;">Henuz yetki tanimlanmamis</td></tr>';
+
+        if (!data.permissions || data.permissions.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Henuz yetki tanimlanmamis</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.permissions.map(perm => {
+          // Null kontrolü ve veri doğrulama
+          const userName = perm.userId?.name || '⚠️ Silinmiş Kullanıcı';
+          const userEmail = perm.userId?.email || 'N/A';
+          const deviceName = perm.deviceId?.name || '⚠️ Silinmiş Cihaz';
+          const grantedBy = perm.grantedBy?.name || 'Sistem';
+
+          // Eğer user veya device silinmişse, row'u farklı style'la göster
+          const isDeleted = !perm.userId || !perm.deviceId;
+          const rowClass = isDeleted ? 'style="opacity: 0.5; background-color: #3a1f1f;"' : '';
+
+          return `
+            <tr ${rowClass}>
+              <td>
+                ${userName}
+                ${perm.userId?.email ? `<br><small style="color: #888;">${userEmail}</small>` : ''}
+              </td>
+              <td>${deviceName}</td>
+              <td>${formatDate(perm.grantedAt)}</td>
+              <td>${grantedBy}</td>
+              <td class="action-btns">
+                ${!isDeleted ? `
+                  <button class="btn btn-danger btn-sm" onclick="revokePermission('${perm.userId?._id}', '${perm.deviceId?._id}')">Yetkiyi Kaldir</button>
+                ` : `
+                  <span style="color: #888;">Gecersiz</span>
+                `}
+              </td>
+            </tr>
+          `;
+        }).join('');
       } catch (error) {
         showToast(error.message, true);
       }

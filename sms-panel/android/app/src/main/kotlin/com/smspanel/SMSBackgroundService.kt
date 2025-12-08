@@ -140,52 +140,82 @@ class SMSBackgroundService : Service() {
         try {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    android.util.Log.d("SMSPanel", "Heartbeat gönderildi")
+                    ActivityLogger.info(this, "BackgroundService", "Heartbeat gönderildi ✓", null)
+                } else {
+                    ActivityLogger.warning(
+                        this,
+                        "BackgroundService",
+                        "Heartbeat başarısız",
+                        "HTTP ${response.code}"
+                    )
                 }
             }
+        } catch (e: java.net.UnknownHostException) {
+            ActivityLogger.error(this, "BackgroundService", "Heartbeat: Sunucuya bağlanılamadı", "DNS hatası")
+        } catch (e: java.net.SocketTimeoutException) {
+            ActivityLogger.error(this, "BackgroundService", "Heartbeat: Timeout", null)
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "Heartbeat hatası: ${e.message}")
+            ActivityLogger.error(
+                this,
+                "BackgroundService",
+                "Heartbeat exception",
+                "${e.javaClass.simpleName}: ${e.message}"
+            )
         }
     }
 
     private suspend fun syncAllSMS() {
-        val serverUrl = prefs.getString("serverUrl", null) ?: return
-        val activationCode = prefs.getString("activationCode", null) ?: return
-
-        // Son sync zamanını al
-        val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
-
-        // SMS'leri oku
-        val messages = readSMSMessages(lastSyncTime)
-
-        if (messages.isEmpty()) {
-            android.util.Log.d("SMSPanel", "Yeni SMS yok")
-            return
-        }
-
-        android.util.Log.d("SMSPanel", "${messages.size} SMS senkronize edilecek")
-
-        val url = "$serverUrl/api/device/sms"
-        val json = gson.toJson(mapOf("messages" to messages))
-
-        val client = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("activation-code", activationCode)
-            .addHeader("Content-Type", "application/json")
-            .post(json.toRequestBody("application/json".toMediaType()))
-            .build()
-
         try {
+            val serverUrl = prefs.getString("serverUrl", null) ?: return
+            val activationCode = prefs.getString("activationCode", null) ?: return
+
+            // Son sync zamanını al
+            val lastSyncTime = prefs.getLong("lastSyncTimestamp", 0)
+
+            ActivityLogger.info(
+                this,
+                "BackgroundService",
+                "SMS sync başlatıldı",
+                "Last sync: $lastSyncTime"
+            )
+
+            // SMS'leri oku
+            val messages = readSMSMessages(lastSyncTime)
+
+            if (messages.isEmpty()) {
+                ActivityLogger.info(this, "BackgroundService", "Sync: Yeni SMS yok", null)
+                return
+            }
+
+            ActivityLogger.info(
+                this,
+                "BackgroundService",
+                "${messages.size} SMS senkronize edilecek",
+                null
+            )
+
+            val url = "$serverUrl/api/device/sms"
+            val json = gson.toJson(mapOf("messages" to messages))
+
+            val client = OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("activation-code", activationCode)
+                .addHeader("Content-Type", "application/json")
+                .post(json.toRequestBody("application/json".toMediaType()))
+                .build()
+
             client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+
                 if (response.isSuccessful) {
-                    val body = response.body?.string()
                     val result = gson.fromJson(body, Map::class.java)
                     val synced = (result["synced"] as? Double)?.toInt() ?: 0
+                    val duplicates = (result["duplicates"] as? Double)?.toInt() ?: 0
 
                     // İstatistikleri güncelle
                     val totalSynced = prefs.getInt("syncedSms", 0) + synced
@@ -195,11 +225,33 @@ class SMSBackgroundService : Service() {
                         .putLong("lastSyncTimestamp", System.currentTimeMillis())
                         .apply()
 
-                    android.util.Log.d("SMSPanel", "$synced SMS senkronize edildi")
+                    ActivityLogger.success(
+                        this,
+                        "BackgroundService",
+                        "Sync tamamlandı ✓",
+                        "$synced yeni SMS, $duplicates duplicate"
+                    )
+                } else {
+                    ActivityLogger.error(
+                        this,
+                        "BackgroundService",
+                        "Sync başarısız",
+                        "HTTP ${response.code}: ${body?.take(200)}"
+                    )
                 }
             }
+
+        } catch (e: java.net.UnknownHostException) {
+            ActivityLogger.error(this, "BackgroundService", "Sync: Sunucuya bağlanılamadı", "DNS hatası")
+        } catch (e: java.net.SocketTimeoutException) {
+            ActivityLogger.error(this, "BackgroundService", "Sync: Timeout", "60 saniye aşıldı")
         } catch (e: Exception) {
-            android.util.Log.e("SMSPanel", "SMS sync hatası: ${e.message}")
+            ActivityLogger.error(
+                this,
+                "BackgroundService",
+                "Sync exception",
+                "${e.javaClass.simpleName}: ${e.message}"
+            )
         }
     }
 
