@@ -99,6 +99,14 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Şifre uzunluk kontrolü
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Şifre en az 6 karakter olmalıdır'
+      });
+    }
+
     // Username kontrolü
     const existingUser = await User.findOne({ username: username.toLowerCase() });
     if (existingUser) {
@@ -176,7 +184,10 @@ router.put('/:id', async (req, res) => {
 
     // Username değişiyorsa duplicate kontrolü
     if (username && username.toLowerCase() !== user.username) {
-      const existingUser = await User.findOne({ username: username.toLowerCase() });
+      const existingUser = await User.findOne({ 
+        username: username.toLowerCase(),
+        _id: { $ne: user._id } // Kendisi hariç
+      });
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -188,22 +199,33 @@ router.put('/:id', async (req, res) => {
 
     // Alanları güncelle
     if (role) user.role = role;
-    if (status) user.status = status;
+    if (status !== undefined) user.status = status; // false değeri için undefined kontrolü
 
-    // Şifre değişiyorsa hashle
-    if (password) {
+    // Şifre değişiyorsa validation ve hash
+    if (password && password.trim() !== '') {
+      // Şifre uzunluk kontrolü
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Şifre en az 6 karakter olmalıdır'
+        });
+      }
+      
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
     }
 
     // Yetkili cihazları güncelle
     if (authorizedDevices !== undefined) {
+      // Array olduğundan emin ol
+      const deviceArray = Array.isArray(authorizedDevices) ? authorizedDevices : [];
+      
       // Eski yetkileri kaldır
       await Permission.deleteMany({ userId: user._id });
 
       // Yeni yetkileri ekle
-      if (authorizedDevices.length > 0) {
-        const permissions = authorizedDevices.map(deviceId => ({
+      if (deviceArray.length > 0) {
+        const permissions = deviceArray.map(deviceId => ({
           userId: user._id,
           deviceId,
           grantedBy: req.user._id
@@ -211,7 +233,7 @@ router.put('/:id', async (req, res) => {
         await Permission.insertMany(permissions, { ordered: false }).catch(() => {});
       }
 
-      user.authorizedDevices = authorizedDevices;
+      user.authorizedDevices = deviceArray;
     }
 
     await user.save();
@@ -226,9 +248,10 @@ router.put('/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('User update hatası:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Sunucu hatası'
+      message: 'Sunucu hatası: ' + error.message
     });
   }
 });
