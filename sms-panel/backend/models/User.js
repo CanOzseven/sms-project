@@ -13,12 +13,14 @@ const userSchema = new mongoose.Schema({
   },
   activationCode: {
     type: String,
+    sparse: true,  // ✅ SPARSE EKLENDİ - null değerler unique kontrolünden muaf
     unique: true,
     required: false
   },
   password: {
     type: String,
-    required: [true, 'Şifre alanı zorunludur'],
+    required: [true, 'Şifre alanı zorunludur']
+    // minlength kaldırıldı - route'da kontrol edilecek
   },
   role: {
     type: String,
