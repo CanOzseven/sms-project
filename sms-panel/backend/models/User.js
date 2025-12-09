@@ -19,7 +19,6 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Şifre alanı zorunludur'],
-    minlength: [6, 'Şifre en az 6 karakter olmalıdır']
   },
   role: {
     type: String,
