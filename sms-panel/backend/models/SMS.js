@@ -57,6 +57,8 @@ const smsSchema = new mongoose.Schema({
   }
 });
 
+smsSchema.index({ deviceId: 1, smsId: 1 }, { unique: true, sparse: true });
+
 // Kayıt öncesi hash oluştur (duplicate önleme)
 smsSchema.pre('save', function(next) {
   if (this.isNew && !this.messageHash) {
