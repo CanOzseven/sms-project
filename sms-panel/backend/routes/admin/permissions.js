@@ -24,9 +24,9 @@ router.get('/', async (req, res) => {
 
     const [permissions, total] = await Promise.all([
       Permission.find(filter)
-        .populate('userId', 'name email role status')
+        .populate('userId', 'username role status')  // ✅ name -> username
         .populate('deviceId', 'name model status')
-        .populate('grantedBy', 'name email')
+        .populate('grantedBy', 'username')  // ✅ name -> username
         .sort({ grantedAt: -1 })
         .skip(parseInt(skip))
         .limit(parseInt(limit)),
@@ -122,7 +122,7 @@ router.post('/grant', async (req, res) => {
 
     res.json({
       success: true,
-      message: `${user.name} kullanıcısına ${device.name} cihazı için yetki verildi`
+      message: `${user.username} kullanıcısına ${device.name} cihazı için yetki verildi`  // ✅ user.name -> user.username
     });
   } catch (error) {
     console.error('Permission grant hatası:', error);
@@ -192,7 +192,7 @@ router.delete('/revoke', async (req, res) => {
 
     res.json({
       success: true,
-      message: `${user.name} kullanıcısının ${device.name} cihazı yetkisi kaldırıldı`
+      message: `${user.username} kullanıcısının ${device.name} cihazı yetkisi kaldırıldı`  // ✅ user.name -> user.username
     });
   } catch (error) {
     console.error('Permission revoke hatası:', error);
@@ -214,7 +214,7 @@ router.get('/user/:userId', async (req, res) => {
       isActive: true
     })
       .populate('deviceId', 'name model status')
-      .populate('grantedBy', 'name')
+      .populate('grantedBy', 'username')  // ✅ name -> username
       .sort({ grantedAt: -1 });
 
     res.json({
@@ -240,8 +240,8 @@ router.get('/device/:deviceId', async (req, res) => {
       deviceId: req.params.deviceId,
       isActive: true
     })
-      .populate('userId', 'name email status')
-      .populate('grantedBy', 'name')
+      .populate('userId', 'username role status')  // ✅ name email -> username role status
+      .populate('grantedBy', 'username')  // ✅ name -> username
       .sort({ grantedAt: -1 });
 
     res.json({
